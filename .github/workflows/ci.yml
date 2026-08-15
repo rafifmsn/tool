@@ -27,14 +27,8 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install Root Dependencies
+      - name: Install Dependencies
         run: pnpm install
-
-      - name: Install Link Dependencies
-        run: cd monorepo/link && pnpm install --ignore-workspace
-
-      - name: Install Note Dependencies
-        run: cd monorepo/note && pnpm install --ignore-workspace
 
       - name: Run Tests
         run: pnpm run test

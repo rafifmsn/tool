@@ -1,3 +1,6 @@
+packages:
+  - "monorepo/*"
+
 allowBuilds:
   esbuild: true
   sharp: true

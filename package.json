@@ -28,11 +28,5 @@
   "devDependencies": {
     "katex": "^0.16.9",
     "vitest": "^2.0.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "sharp"
-    ]
   }
 }
