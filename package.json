@@ -29,7 +29,10 @@
     "katex": "^0.16.9",
     "vitest": "^2.0.5"
   },
-  "allowScripts": {
-    "esbuild@0.28.2": true
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   }
 }
