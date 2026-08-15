@@ -1,0 +1,376 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { Plus, Trash2, Pencil, Check } from '@lucide/astro';
+import Topbar from '../components/navigation/Topbar.astro';
+---
+
+<BaseLayout title="Tasks - Rafif Muchsin" description="Organize your daily tasks, sort them by dragging, and check them off when done.">
+  <body class="h-full w-full overflow-hidden bg-background">
+    <div id="app-root" class="flex flex-col h-full w-full">
+      <!-- Topbar -->
+      <Topbar subTitle="Tasks">
+        <button id="btn-clear-all" class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-rose-950/30 text-rose-400 border border-rose-900/50 hover:bg-rose-900/30 transition-colors cursor-pointer" title="Clear all tasks">
+          <Trash2 size={12} />
+          <span>Clear All</span>
+        </button>
+      </Topbar>
+
+      <!-- Main Content -->
+      <div class="flex-1 overflow-y-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto space-y-6">
+
+          <!-- New Task Input -->
+          <div class="flex gap-2 p-4 rounded-lg border border-border bg-card shadow-sm">
+            <input
+              type="text"
+              id="task-input"
+              placeholder="Add a new task..."
+              class="flex-1 min-w-0 bg-muted border border-border rounded-md px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-outline transition-colors"
+            />
+            <button
+              id="btn-add-task"
+              class="flex items-center justify-center gap-1.5 h-8.5 px-4 rounded-md text-sm font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors cursor-pointer"
+            >
+              <Plus size={14} />
+              <span class="-mb-1">Add</span>
+            </button>
+          </div>
+
+          <!-- Pending Tasks Section -->
+          <div class="space-y-2">
+            <h2 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Pending</h2>
+            <div id="pending-tasks-list" class="space-y-2 min-h-12.5 transition-colors rounded-lg">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Completed Tasks Section -->
+          <div class="space-y-2 pt-4">
+            <h2 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Completed</h2>
+            <div id="completed-tasks-list" class="space-y-2 min-h-12.5">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="clear-confirm-modal" class="fixed inset-0 z-50 items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4 animate-fade-in [&:not(.hidden)]:flex">
+      <div class="bg-card border border-border rounded-lg p-5 max-w-sm w-full shadow-2xl animate-scale-in">
+        <h3 class="text-sm font-semibold text-foreground mb-2">Clear All Tasks?</h3>
+        <p class="text-xs text-muted-foreground mb-4 leading-relaxed">This will permanently delete all tasks (both completed and uncompleted) under this tab. This action cannot be undone.</p>
+        <div class="flex justify-end gap-2 text-xs">
+          <button id="confirm-cancel-btn" class="h-8 px-3 rounded-md border border-border hover:bg-muted transition-colors cursor-pointer text-muted-foreground">Cancel</button>
+          <button id="confirm-ok-btn" class="h-8 px-3 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors cursor-pointer">Clear All</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</BaseLayout>
+
+<script>
+  import {
+    getTasks,
+    saveTask,
+    deleteTask,
+    deleteAllTasks,
+    getNextTaskOrder,
+    generateId,
+    initDefaultTabs
+  } from '../services/db';
+
+  let activeTabId = '';
+  const pendingContainer = document.getElementById('pending-tasks-list') as HTMLDivElement;
+  const completedContainer = document.getElementById('completed-tasks-list') as HTMLDivElement;
+  const taskInput = document.getElementById('task-input') as HTMLInputElement;
+  const addTaskBtn = document.getElementById('btn-add-task') as HTMLButtonElement;
+  const clearAllBtn = document.getElementById('btn-clear-all') as HTMLButtonElement;
+
+  const clearModal = document.getElementById('clear-confirm-modal') as HTMLDivElement;
+  const confirmCancelBtn = document.getElementById('confirm-cancel-btn') as HTMLButtonElement;
+  const confirmOkBtn = document.getElementById('confirm-ok-btn') as HTMLButtonElement;
+
+  // Initialize tabs and load tasks
+  initDefaultTabs().then((tabs) => {
+    const saved = localStorage.getItem('note-active-tab');
+    if (saved && tabs.some((t) => t.id === saved)) {
+      activeTabId = saved;
+    } else {
+      activeTabId = tabs[0]?.id || '';
+    }
+    loadTasks();
+  });
+
+  // Load and render tasks from db
+  async function loadTasks() {
+    if (!activeTabId) return;
+    const allTasks = await getTasks(activeTabId);
+
+    // Sort all tasks
+    const pending = allTasks.filter(t => !t.completed).sort((a, b) => a.order - b.order);
+    const completed = allTasks.filter(t => t.completed).sort((a, b) => b.createdAt - a.createdAt); // Show newest completed first
+
+    renderTaskList(pending, pendingContainer, false);
+    renderTaskList(completed, completedContainer, true);
+  }
+
+  // Render a list of tasks inside a container
+  function renderTaskList(tasks: any[], container: HTMLDivElement, isCompleted: boolean) {
+    container.innerHTML = '';
+
+    if (tasks.length === 0) {
+      container.innerHTML = `
+        <div class="flex items-center justify-center p-6 border border-dashed border-border rounded-md text-xs text-muted-foreground">
+          No ${isCompleted ? 'completed' : 'pending'} tasks
+        </div>
+      `;
+      return;
+    }
+
+    tasks.forEach((task) => {
+      const card = document.createElement('div');
+      card.className = `task-card flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-card transition-all ${
+        !isCompleted ? 'cursor-grab active:cursor-grabbing hover:border-outline' : 'opacity-65'
+      }`;
+      card.dataset.id = task.id;
+
+      if (!isCompleted) {
+        card.draggable = true;
+
+        // Visual Drag & Drop feedback listeners
+        card.addEventListener('dragstart', (e) => {
+          card.classList.add('opacity-40', 'border-outline', 'dragging');
+          e.dataTransfer?.setData('text/plain', task.id);
+        });
+
+        card.addEventListener('dragend', async () => {
+          card.classList.remove('opacity-40', 'border-outline', 'dragging');
+          await saveNewOrder();
+        });
+      }
+
+      // Left Section: Checkbox + Title
+      const leftPart = document.createElement('div');
+      leftPart.className = 'flex items-center gap-3 flex-1 min-w-0';
+
+      const checkbox = document.createElement('button');
+      checkbox.className = `flex items-center justify-center w-4 h-4 rounded border transition-colors cursor-pointer ${
+        isCompleted
+          ? 'bg-primary border-primary text-primary-foreground'
+          : 'border-border hover:border-outline bg-muted'
+      }`;
+
+      if (isCompleted) {
+        // Simple tick mark icon inside button
+        checkbox.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+      }
+
+      checkbox.addEventListener('click', async () => {
+        task.completed = !task.completed;
+        await saveTask(task);
+        loadTasks();
+      });
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = `text-sm truncate select-none ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`;
+      titleSpan.textContent = task.title;
+
+      leftPart.appendChild(checkbox);
+      leftPart.appendChild(titleSpan);
+
+      // Inline renaming input container
+      const editInput = document.createElement('input');
+      editInput.type = 'text';
+      editInput.className = 'hidden flex-1 min-w-0 bg-muted border border-outline rounded px-2 py-0.5 text-sm text-foreground focus:outline-none';
+      editInput.value = task.title;
+      leftPart.appendChild(editInput);
+
+      // Right Section: Buttons
+      const rightPart = document.createElement('div');
+      rightPart.className = 'flex items-center gap-1.5 shrink-0';
+
+      // Buttons layout container
+      card.className += ' group';
+
+      // Rename button
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'icon-btn-2 text-muted-foreground hover:text-foreground cursor-pointer w-6 h-6 rounded flex items-center justify-center';
+      renameBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+        </svg>
+      `;
+      renameBtn.title = 'Rename task';
+
+      const saveRename = async () => {
+        const val = editInput.value.trim();
+        if (val && val !== task.title) {
+          task.title = val;
+          await saveTask(task);
+        }
+        titleSpan.textContent = task.title;
+        titleSpan.classList.remove('hidden');
+        editInput.classList.add('hidden');
+      };
+
+      renameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        titleSpan.classList.add('hidden');
+        editInput.classList.remove('hidden');
+        editInput.focus();
+        editInput.select();
+      });
+
+      editInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          saveRename();
+        } else if (e.key === 'Escape') {
+          editInput.value = task.title;
+          titleSpan.classList.remove('hidden');
+          editInput.classList.add('hidden');
+        }
+      });
+      editInput.addEventListener('blur', saveRename);
+
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'icon-btn-2 text-muted-foreground hover:text-error cursor-pointer w-6 h-6 rounded flex items-center justify-center';
+      deleteBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+        </svg>
+      `;
+      deleteBtn.title = 'Delete task';
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await deleteTask(task.id);
+        loadTasks();
+      });
+
+      rightPart.appendChild(renameBtn);
+      rightPart.appendChild(deleteBtn);
+
+      card.appendChild(leftPart);
+      card.appendChild(rightPart);
+      container.appendChild(card);
+    });
+  }
+
+  // Save new ordering based on DOM layout after dragging
+  async function saveNewOrder() {
+    const cards = Array.from(pendingContainer.querySelectorAll('.task-card')) as HTMLDivElement[];
+    let idx = 0;
+    for (const card of cards) {
+      const id = card.dataset.id;
+      if (id) {
+        const allTasks = await getTasks(activeTabId);
+        const task = allTasks.find(t => t.id === id);
+        if (task) {
+          task.order = idx++;
+          await saveTask(task);
+        }
+      }
+    }
+    loadTasks();
+  }
+
+  // Handle Drag Over to allow insertion reordering
+  pendingContainer.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const draggingCard = pendingContainer.querySelector('.dragging');
+    if (!draggingCard) return;
+
+    const siblings = Array.from(pendingContainer.querySelectorAll('.task-card:not(.dragging)')) as HTMLDivElement[];
+
+    // Find sibling directly under cursor
+    const nextSibling = siblings.find(sibling => {
+      const box = sibling.getBoundingClientRect();
+      const offset = e.clientY - box.top - box.height / 2;
+      return offset < 0;
+    });
+
+    if (nextSibling) {
+      pendingContainer.insertBefore(draggingCard, nextSibling);
+    } else {
+      pendingContainer.appendChild(draggingCard);
+    }
+  });
+
+  // Add a task
+  async function handleAddTask() {
+    const title = taskInput.value.trim();
+    if (!title || !activeTabId) return;
+
+    const order = await getNextTaskOrder(activeTabId);
+    const newTask = {
+      id: generateId(),
+      title,
+      completed: false,
+      order,
+      tabId: activeTabId,
+      createdAt: Date.now()
+    };
+
+    await saveTask(newTask);
+    taskInput.value = '';
+    loadTasks();
+  }
+
+  addTaskBtn.addEventListener('click', handleAddTask);
+  taskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleAddTask();
+  });
+
+  // Modal handlers
+  clearAllBtn.addEventListener('click', () => {
+    clearModal.classList.remove('hidden');
+  });
+
+  confirmCancelBtn.addEventListener('click', () => {
+    clearModal.classList.add('hidden');
+  });
+
+  clearModal.addEventListener('click', (e) => {
+    if (e.target === clearModal) {
+      clearModal.classList.add('hidden');
+    }
+  });
+
+  confirmOkBtn.addEventListener('click', async () => {
+    if (activeTabId) {
+      await deleteAllTasks(activeTabId);
+      loadTasks();
+    }
+    clearModal.classList.add('hidden');
+  });
+</script>
+
+<style>
+  :root { height: 100%; }
+  body { height: 100%; margin: 0; padding: 0; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.15s ease-out forwards;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+</style>

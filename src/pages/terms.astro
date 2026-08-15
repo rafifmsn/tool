@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { marked } from "marked";
+
+const content = `# Terms of Service
+
+*Last updated: June 2026*
+
+Here is the updated text with all the section dashes removed.
+
+## Use of Service
+
+rafifmsn/tool is provided as a free, privacy-first suite of local-first browser utilities designed to enhance development and productivity workflows. By accessing or using this website, you agree to comply with and be bound by these simple terms. If you do not agree, please discontinue use of the tools.
+
+## No Warranties
+
+This software is provided on an "as is" and "as available" basis without any warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. Use of these tools is entirely at your own risk.
+
+## Limitation of Liability
+
+In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software, your use of the tools, or the inability to use them.
+
+## Intellectual Property & Open Source
+
+While the design, branding, and original concepts are unique to this platform, the underlying source code for rafifmsn/tool is open-source software. The project is explicitly licensed under the terms of the permissive MIT License.
+
+You are free to view, modify, and distribute the codebase in accordance with those terms. For full details regarding permissions, limitations, and copyright notices, please refer to the official [LICENSE](https://github.com/rafifmsn/tool/blob/main/LICENSE) file in the repository.
+
+## Changes to Terms
+
+We reserve the right to modify, update, or replace these terms at any time without prior notice. Continued use of the tools after any changes constitute acceptance of the updated terms.
+
+## Contact
+
+For inquiries regarding this Terms of Service, submit a request through our [Contact Form](https://go.rafifmsn.com/contact-form).
+`;
+
+const html = marked(content);
+---
+
+<BaseLayout title="Terms of Service - Rafif Muchsin" description="Terms of service for rafifmsn/tool." topbarTitle="Terms of Service">
+  <article class="max-w-2xl mx-auto px-4 py-8 lg:py-12 prose">
+    <Fragment set:html={html} />
+  </article>
+</BaseLayout>

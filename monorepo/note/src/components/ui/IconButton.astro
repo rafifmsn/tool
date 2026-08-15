@@ -1,0 +1,19 @@
+---
+export interface Props {
+  class?: string;
+  label: string;
+  icon?: string;
+}
+
+const { class: className = '', icon, label } = Astro.props;
+---
+
+<button
+  class={`icon-btn ${className}`}
+  aria-label={label}
+  title={label}
+  {...Astro.props}
+>
+  {icon && <span class="text-[14px] leading-none" data-icon>{icon}</span>}
+  <slot />
+</button>

@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/ui/Button.astro';
+---
+
+<BaseLayout title="404: Page Not Found - Rafif Muchsin" description="The page you are looking for does not exist.">
+  <div class="flex items-center justify-center h-screen w-screen bg-background text-text-primary">
+    <div class="text-center">
+      <h1 class="text-4xl font-semibold font-secondary mb-2">404</h1>
+      <p class="text-sm text-text-secondary mb-6">Page not found</p>
+      <a href="/">
+        <Button variant="primary" size="md">Go Home</Button>
+      </a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  :root { height: 100%; }
+</style>

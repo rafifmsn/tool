@@ -1,0 +1,756 @@
+---
+import Layout from "../layout/Layout.astro";
+import {
+    Link,
+    Trash,
+    Zap,
+    Copy,
+    CircleAlert,
+    CircleCheckBig,
+    X,
+    LoaderCircle,
+    KeyRound,
+    Download,
+} from "@lucide/astro";
+import { Button } from "@/components/starwind/button";
+import { Input } from "@/components/starwind/input";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+} from "@/components/starwind/select";
+---
+
+<Layout title={`Link Shortener - Rafif Muchsin`}>
+    <main
+        class="w-full max-w-xl mx-auto px-6 py-12 md:py-16 lg:min-h-screen lg:relative z-10 lg:flex flex-col justify-center"
+    >
+        <div class="mb-10 text-center">
+            <h1 class="text-3xl lg:text-4xl font-secondary font-bold tracking-tight mb-2">
+              rafifmsn/tool
+            </h1>
+            <p class="mt-4 text-muted-foreground">
+                Serverless link shortener. Back to <a href="https://tool.rafifmsn.com" class="underline">rafifmsn/tool</a>.
+            </p>
+        </div>
+
+        <div
+            class="space-y-5 bg-card p-6 sm:p-8 rounded-3xl border border-border shadow-2xl"
+        >
+            <div
+                class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            >
+                <label
+                    class="text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                    >Target &amp; Preset</label
+                >
+
+                <Select id="prefix-select" name="prefix" defaultValue="custom_unregistered">
+                    <SelectTrigger class="min-w-50 w-full sm:w-auto bg-background border-border rounded-xl px-4 py-3 text-sm text-foreground">
+                        <SelectValue placeholder="Select Option" />
+                    </SelectTrigger>
+                    <SelectContent class="bg-popover border-border">
+                        <SelectGroup id="prefix-select-group">
+                            <SelectItem value="custom_unregistered">Custom (Unregistered)</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div>
+                <div class="relative group">
+                    <Input
+                        type="text"
+                        id="long-url"
+                        placeholder="https://..."
+                        class="pl-12 pr-4 text-sm"
+                    />
+                    <Link
+                        class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-foreground transition-colors z-10 pointer-events-none"
+                    />
+                </div>
+            </div>
+
+            <div class="pt-2 grid grid-cols-2 gap-4">
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider"
+                        >GitHub User</label
+                    >
+                    <Input
+                        type="text"
+                        id="gh-user"
+                        size="sm"
+                        class="text-sm placeholder:text-muted-foreground/50"
+                    />
+                </div>
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider"
+                        >Repo Name</label
+                    >
+                    <Input
+                        type="text"
+                        id="gh-repo"
+                        size="sm"
+                        class="text-sm placeholder:text-muted-foreground/50"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label
+                    class="block text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider"
+                    >GitHub Token</label
+                >
+                <div class="relative group">
+                    <Input
+                        type="password"
+                        id="gh-token"
+                        placeholder="ghp_..."
+                        class="pl-12 pr-14"
+                    />
+                    <KeyRound
+                        class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-foreground transition-colors z-10 pointer-events-none"
+                    />
+                    <button
+                        id="clear-token-btn"
+                        disabled
+                        class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-all bg-muted hover:bg-accent rounded-lg w-7 h-7 flex items-center justify-center opacity-0 pointer-events-none"
+                        title="Clear Saved Token"
+                    >
+                        <Trash class="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
+
+            <Button
+                id="shorten-btn"
+                variant="default"
+                size="md"
+                class="w-full font-semibold mt-4"
+            >
+                <Zap id="shorten-btn-icon" class="w-4 h-4" />
+                <span id="shorten-btn-text">Generate Link</span>
+                <LoaderCircle
+                    id="shorten-btn-loader"
+                    class="w-4 h-4 animate-spin hidden"
+                />
+            </Button>
+
+            <div class="text-center">
+                <button
+                    id="open-docs-btn"
+                    class="text-sm text-muted-foreground hover:text-foreground underline decoration-border underline-offset-4 transition-colors"
+                >
+                    How does this work?
+                </button>
+            </div>
+
+            <div
+                id="result-area"
+                class="hidden pt-6 border-t border-border/50 animate-in fade-in slide-in-from-top-4"
+            >
+                <p
+                    class="text-[10px] text-muted-foreground mb-2 uppercase font-semibold tracking-[0.2em]"
+                >
+                    Ready to share
+                </p>
+                <div class="flex gap-2">
+                    <Input
+                        type="text"
+                        id="short-result"
+                        readonly
+                        size="sm"
+                        class="flex-1 px-4 py-3 text-xs select-all"
+                    />
+                    <Button
+                        id="copy-btn"
+                        variant="outline"
+                        size="sm"
+                        class="px-5 rounded-xl transition-all active:scale-90"
+                    >
+                        <Copy class="w-4 h-4" />
+                    </Button>
+                </div>
+
+                <div
+                    class="mt-4 flex flex-col items-center bg-muted border border-border/50 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-300"
+                >
+                    <div class="p-2.5 bg-white rounded-xl shadow-inner">
+                        <canvas id="qr-canvas" class="w-36 h-36 block"></canvas>
+                    </div>
+                    <Button
+                        id="download-qr-btn"
+                        variant="outline"
+                        size="sm"
+                        class="mt-3 font-semibold"
+                    >
+                        <Download class="w-3.5 h-3.5" />
+                        <span>Download QR Code</span>
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div
+        id="toast"
+        class="fixed top-6 left-1/2 -translate-x-1/2 z-50 transform transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none"
+    >
+        <div
+            class="bg-card border border-border text-foreground px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-75"
+        >
+            <div id="toast-icon" class="text-red-500">
+                <CircleAlert id="toast-icon-error" class="w-5 h-5 hidden" />
+                <CircleCheckBig
+                    id="toast-icon-success"
+                    class="w-5 h-5 hidden"
+                />
+            </div>
+            <div class="flex-1 space-y-1 ml-1.5">
+                <h4 id="toast-title" class="font-bold text-sm">Error</h4>
+                <p id="toast-message" class="text-xs text-muted-foreground">
+                    Something went wrong
+                </p>
+            </div>
+            <button
+                id="toast-close"
+                class="text-muted-foreground hover:text-foreground transition-colors"
+            >
+                <X class="w-4 h-4" />
+            </button>
+        </div>
+    </div>
+
+    <!-- Docs dialog -->
+    <dialog
+        id="docs-dialog"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] bg-card border border-border rounded-3xl max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-0 backdrop:bg-black/50 backdrop:backdrop-blur-sm open:animate-in open:fade-in open:zoom-in-95"
+    >
+        <div class="relative p-8 sm:p-10">
+            <button
+                id="close-docs-btn"
+                class="absolute top-5 right-5 text-muted-foreground hover:text-foreground transition-colors p-2 rounded-full hover:bg-white/10"
+            >
+                <X class="w-5 h-5" />
+            </button>
+
+            <h2 class="text-2xl font-bold text-foreground mb-4 tracking-tight">
+                Documentation
+            </h2>
+            <p class="text-muted-foreground text-sm leading-relaxed mb-4">
+                This is a completely serverless link shortener that uses a
+                GitHub repo as the database. It offers 100% data ownership with
+                zero database hosting costs.
+            </p>
+
+            <h3 class="text-base font-bold text-foreground mt-6 mb-3">
+                1. How to Use It
+            </h3>
+            <ul class="text-muted-foreground text-sm list-disc pl-5 space-y-2">
+                <li>
+                    <strong class="text-foreground">Create a Database:</strong> Make a new, empty public GitHub repository.
+                </li>
+                <li>
+                    <strong class="text-foreground">Get a Token:</strong> Generate
+                    a Personal Access Token (classic) with the <code class="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs border border-border">repo</code> scope.
+                </li>
+                <li>
+                    <strong class="text-foreground">Generate:</strong> Select "Custom",
+                    input credentials, and run.
+                </li>
+            </ul>
+
+            <h3 class="text-base font-bold text-foreground mt-6 mb-3">
+                2. Token Privacy &amp; Security
+            </h3>
+             <p class="text-muted-foreground text-sm leading-relaxed mb-4">
+                Your GitHub Token is securely hidden locally using a symmetric
+                bitwise layer before committing to the browser sandbox storage.
+                To remove your saved token from local storage completely, you can
+                use the trash clear button directly beside the token input field.
+            </p>
+            <p class="text-muted-foreground text-sm leading-relaxed mb-4">
+                Additionally, a strict Content Security Policy (CSP) has been
+                implemented via Cloudflare Pages headers to enforce secure connections
+                and prevent unauthorized data exfiltration.
+            </p>
+            <p class="text-muted-foreground text-sm leading-relaxed">
+                You can also self-host this static build or Docker deployment.
+                To learn more about the security model or contribute, check out
+                the <a
+                    href="https://github.com/rafifmsn/tool/tree/main/monorepo/link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-foreground underline underline-offset-4 decoration-border hover:decoration-foreground transition-colors inline-flex items-center gap-1"
+                    >link repository</a
+                >.
+            </p>
+        </div>
+    </dialog>
+</Layout>
+
+<script>
+    import QRCode from "qrcode";
+    import {
+        cleanGitHubIdentifier,
+        validateAndNormalizeUrl,
+        encryptToken,
+        decryptToken,
+    } from "../utils/security";
+
+    interface Config {
+        prefix: string;
+        name: string;
+        user: string;
+        repo: string;
+        default?: boolean;
+    }
+
+    const ui = {
+        qrCanvas: document.getElementById("qr-canvas") as HTMLCanvasElement,
+        downloadQrBtn: document.getElementById(
+            "download-qr-btn",
+        ) as HTMLButtonElement,
+        prefixSelect: document.getElementById(
+            "prefix-select",
+        ) as HTMLDivElement,
+        targetUrl: document.getElementById("long-url") as HTMLInputElement,
+        ghUser: document.getElementById("gh-user") as HTMLInputElement,
+        ghRepo: document.getElementById("gh-repo") as HTMLInputElement,
+        token: document.getElementById("gh-token") as HTMLInputElement,
+        clearTokenBtn: document.getElementById(
+            "clear-token-btn",
+        ) as HTMLButtonElement,
+        btn: document.getElementById("shorten-btn") as HTMLButtonElement,
+        result: document.getElementById("result-area") as HTMLDivElement,
+        resultInput: document.getElementById(
+            "short-result",
+        ) as HTMLInputElement,
+        copyBtn: document.getElementById("copy-btn") as HTMLButtonElement,
+        get toastEl() {
+            return document.getElementById("toast") as HTMLDivElement;
+        },
+        get toastTitle() {
+            return document.getElementById("toast-title") as HTMLElement;
+        },
+        get toastMsg() {
+            return document.getElementById("toast-message") as HTMLElement;
+        },
+        get toastIcon() {
+            return document.getElementById("toast-icon") as HTMLElement;
+        },
+        get toastClose() {
+            return document.getElementById("toast-close") as HTMLButtonElement;
+        },
+
+        docsBtn: document.getElementById("open-docs-btn") as HTMLButtonElement,
+        docsDialog: document.getElementById("docs-dialog") as HTMLDialogElement,
+        closeDocsBtn: document.getElementById(
+            "close-docs-btn",
+        ) as HTMLButtonElement,
+    };
+
+    let configList: Config[] = [];
+
+    // --- SANITIZATION ---
+    function sanitizeString(str: string): string {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#x27;")
+            .replace(/\//g, "&#x2F;");
+    }
+
+    // --- IndexedDB ---
+    function openDB(): Promise<IDBDatabase> {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open("link-db", 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains("secrets"))
+                    db.createObjectStore("secrets");
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbGet(key: string): Promise<string | null> {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction("secrets", "readonly");
+            const req = tx.objectStore("secrets").get(key);
+            req.onsuccess = () => resolve(req.result ?? null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbSet(key: string, value: string): Promise<void> {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction("secrets", "readwrite");
+            const req = tx.objectStore("secrets").put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbDelete(key: string): Promise<void> {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction("secrets", "readwrite");
+            const req = tx.objectStore("secrets").delete(key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    // --- DIALOG ---
+    ui.docsBtn?.addEventListener("click", () => ui.docsDialog?.showModal());
+    ui.closeDocsBtn?.addEventListener("click", () => ui.docsDialog?.close());
+    ui.docsDialog?.addEventListener("click", (e) => {
+        if (e.target === ui.docsDialog) ui.docsDialog.close();
+    });
+
+    // --- CLEAR TOKEN BUTTON ---
+    function updateClearBtn() {
+        const hasContent = ui.token.value.length > 0;
+        ui.clearTokenBtn.disabled = !hasContent;
+        ui.clearTokenBtn.classList.toggle("opacity-0", !hasContent);
+        ui.clearTokenBtn.classList.toggle("pointer-events-none", !hasContent);
+        ui.clearTokenBtn.classList.toggle("opacity-100", hasContent);
+        ui.clearTokenBtn.classList.toggle("pointer-events-auto", hasContent);
+    }
+
+    ui.token.addEventListener("input", updateClearBtn);
+    ui.token.addEventListener("change", updateClearBtn);
+
+    ui.clearTokenBtn?.addEventListener("click", async () => {
+        try {
+            await idbDelete("gh_token");
+            ui.token.value = "";
+            updateClearBtn();
+            showToast(
+                "Cleared",
+                "Encrypted local credentials deleted from storage.",
+                "success",
+            );
+        } catch {
+            showToast("Error", "Could not clear token.");
+        }
+    });
+
+    // --- TOAST ---
+    function showToast(
+        title: string,
+        msg: string,
+        type: "error" | "success" = "error",
+    ) {
+        const { toastEl, toastTitle, toastMsg, toastIcon } = ui;
+        if (!toastEl || !toastTitle || !toastMsg || !toastIcon) return;
+
+        toastTitle.innerText = title;
+        toastMsg.innerText = msg;
+        const errIcon = document.getElementById("toast-icon-error");
+        const succIcon = document.getElementById("toast-icon-success");
+        if (type === "error") {
+            errIcon?.classList.remove("hidden");
+            succIcon?.classList.add("hidden");
+            toastIcon.className = "text-red-500";
+        } else {
+            errIcon?.classList.add("hidden");
+            succIcon?.classList.remove("hidden");
+            toastIcon.className = "text-green-500";
+        }
+        toastEl.classList.remove("-translate-y-20", "opacity-0", "pointer-events-none");
+        toastEl.classList.add("translate-y-0", "opacity-100");
+        setTimeout(() => hideToast(), 4000);
+    }
+
+    // --- TOAST HIDE ---
+    function hideToast() {
+        const el = ui.toastEl;
+        if (el) {
+            el.classList.add("-translate-y-20", "opacity-0", "pointer-events-none");
+            el.classList.remove("translate-y-0", "opacity-100");
+        }
+    }
+
+    // --- INIT ---
+    async function init() {
+        try {
+            const res = await fetch("/domains.json");
+            configList = await res.json();
+
+            const customOpt = `<div data-sw-select-item role="option" aria-selected="false" tabindex="-1" class="data-highlighted:bg-accent data-highlighted:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-xl py-2 px-4 outline-none select-none text-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer" data-slot="select-item" data-value="custom_unregistered">
+                <div class="flex flex-1 shrink-0 gap-2 whitespace-nowrap" data-slot="select-item-text">Custom (Unregistered)</div>
+            </div>`;
+            const presetOpts = configList
+                .map(
+                    (c) =>
+                        `<div data-sw-select-item role="option" aria-selected="false" tabindex="-1" class="data-highlighted:bg-accent data-highlighted:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-xl py-2 px-4 outline-none select-none text-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer" data-slot="select-item" data-value="${sanitizeString(c.prefix)}">
+                            <div class="flex flex-1 shrink-0 gap-2 whitespace-nowrap" data-slot="select-item-text">${sanitizeString(c.name)}</div>
+                        </div>`,
+                )
+                .join("");
+
+            const selectGroup = document.getElementById("prefix-select-group");
+            if (selectGroup) {
+                selectGroup.innerHTML = customOpt + presetOpts;
+            }
+
+            const def = configList.find((c) => c.default);
+            const initialVal = def ? def.prefix || "" : "custom_unregistered";
+
+            // Set value programmatically on the hidden input and dispatch event
+            const hiddenInput = ui.prefixSelect.querySelector("input[data-sw-select-input]") as HTMLInputElement;
+            if (hiddenInput) {
+                hiddenInput.value = initialVal;
+                // Dispatch event so layout catches it
+                hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        } catch {
+            showToast("Config Error", "Could not load domains.json");
+        }
+
+        try {
+            const savedToken = await idbGet("gh_token");
+            if (savedToken) {
+                const decrypted = decryptToken(savedToken);
+                ui.token.value = decrypted || "";
+            }
+            updateClearBtn();
+        } catch {
+            /* Fallback */
+        }
+    }
+
+    function handleSelectChange() {
+        const hiddenInput = ui.prefixSelect.querySelector("input[data-sw-select-input]") as HTMLInputElement;
+        const val = hiddenInput ? hiddenInput.value : "custom_unregistered";
+
+        // Also update SelectTrigger's visible label value to match standard Starwind style
+        const selectValueEl = ui.prefixSelect.querySelector("[data-slot=select-value]") as HTMLElement;
+        if (selectValueEl) {
+            if (val === "custom_unregistered") {
+                selectValueEl.textContent = "Custom (Unregistered)";
+            } else {
+                const conf = configList.find((c) => (c.prefix || "") === val);
+                if (conf) {
+                    selectValueEl.textContent = conf.name;
+                }
+            }
+        }
+
+        if (val === "custom_unregistered") {
+            ui.ghUser.readOnly = false;
+            ui.ghUser.value = "";
+            ui.ghRepo.readOnly = false;
+            ui.ghRepo.value = "";
+            ui.ghUser.placeholder = "username";
+            ui.ghRepo.placeholder = "repo-name";
+        } else {
+            const conf = configList.find((c) => (c.prefix || "") === val);
+            if (conf) {
+                ui.ghUser.value = cleanGitHubIdentifier(conf.user);
+                ui.ghUser.readOnly = true;
+                ui.ghRepo.value = cleanGitHubIdentifier(conf.repo);
+                ui.ghRepo.readOnly = true;
+            }
+        }
+    }
+
+    // Track changes on the hidden input because programmatic setting doesn't trigger standard "change" events automatically
+    const hiddenInput = ui.prefixSelect.querySelector("input[data-sw-select-input]") as HTMLInputElement;
+    if (hiddenInput) {
+        const nativeValueDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+        Object.defineProperty(hiddenInput, "value", {
+            get() {
+                return nativeValueDescriptor?.get?.call(this);
+            },
+            set(val) {
+                nativeValueDescriptor?.set?.call(this, val);
+                handleSelectChange();
+            }
+        });
+
+        const observer = new MutationObserver(() => handleSelectChange());
+        observer.observe(hiddenInput, { attributes: true, attributeFilter: ["value"] });
+
+        hiddenInput.addEventListener("change", handleSelectChange);
+        hiddenInput.addEventListener("input", handleSelectChange);
+    }
+
+    ui.prefixSelect.addEventListener("change", handleSelectChange);
+
+    ui.btn?.addEventListener("click", async () => {
+        const rawTarget = ui.targetUrl.value;
+        const rawToken = ui.token.value;
+        const rawUser = ui.ghUser.value;
+        const rawRepo = ui.ghRepo.value;
+
+        if (!rawTarget || !rawToken || !rawUser || !rawRepo) {
+            return showToast("Missing Fields", "All fields required.");
+        }
+
+        const finalTarget = validateAndNormalizeUrl(rawTarget);
+        if (!finalTarget) {
+            return showToast(
+                "Invalid Target URL",
+                "Please enter a valid HTTP/HTTPS URL.",
+            );
+        }
+
+        const user = cleanGitHubIdentifier(rawUser);
+        const repo = cleanGitHubIdentifier(rawRepo);
+        const token = rawToken.trim();
+
+        if (!user || !repo) {
+            return showToast(
+                "Validation Error",
+                "Invalid repository configuration.",
+            );
+        }
+
+        try {
+            await idbSet("gh_token", encryptToken(token));
+        } catch {
+            /* Fail silently */
+        }
+
+        const btnText = document.getElementById("shorten-btn-text");
+        const btnIcon = document.getElementById("shorten-btn-icon");
+        const btnLoader = document.getElementById("shorten-btn-loader");
+        ui.btn.disabled = true;
+        if (btnText) btnText.textContent = "Generating...";
+        btnIcon?.classList.add("hidden");
+        btnLoader?.classList.remove("hidden");
+
+        try {
+            const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+            let t = Date.now();
+            let id = "";
+            for (let i = 0; i < 10; i++) {
+                id = ENCODING[t % 32] + id;
+                t = Math.floor(t / 32);
+            }
+
+            const now = new Date();
+            const y = now.getUTCFullYear();
+            const m = String(now.getUTCMonth() + 1).padStart(2, "0");
+            const path = `data/${y}/${m}/${id}.json`;
+
+            const content = {
+                target: finalTarget,
+                repoUser: sanitizeString(user),
+                repoName: sanitizeString(repo),
+                created: new Date().toISOString(),
+            };
+
+            const res = await fetch(
+                `https://api.github.com/repos/${encodeURIComponent(user)}/${encodeURIComponent(repo)}/contents/${path}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        message: `Link: ${id}`,
+                        content: btoa(JSON.stringify(content)),
+                    }),
+                },
+            );
+
+            if (!res.ok)
+                throw new Error(
+                    "GitHub API error — check token scope and repo access.",
+                );
+
+            const SERVICE_DOMAIN = window.location.origin;
+            let finalShortLink = "";
+
+            const matchedConfig = configList.find(
+                (c) => c.user === user && c.repo === repo,
+            );
+
+            if (matchedConfig) {
+                const prefixPath = matchedConfig.prefix
+                    ? `/${encodeURIComponent(matchedConfig.prefix)}/${id}`
+                    : `/${id}`;
+                finalShortLink = SERVICE_DOMAIN + prefixPath;
+            } else {
+                finalShortLink = `${SERVICE_DOMAIN}/${id}#u=${encodeURIComponent(user)}&r=${encodeURIComponent(repo)}`;
+            }
+
+            ui.result.classList.remove("hidden");
+            ui.resultInput.value = finalShortLink;
+
+            if (ui.qrCanvas) {
+                ui.qrCanvas.getContext("2d", { willReadFrequently: true });
+                QRCode.toCanvas(
+                    ui.qrCanvas,
+                    finalShortLink,
+                    {
+                        width: 144,
+                        margin: 1,
+                        color: { dark: "#000000", light: "#FFFFFF" },
+                    },
+                    (error) => {
+                        if (error) console.error(error);
+                    },
+                );
+            }
+
+            showToast("Success", "Link created successfully!", "success");
+        } catch (e: any) {
+            showToast("Error", e.message);
+        } finally {
+            ui.btn.disabled = false;
+            const btnText = document.getElementById("shorten-btn-text");
+            const btnIcon = document.getElementById("shorten-btn-icon");
+            const btnLoader = document.getElementById("shorten-btn-loader");
+            if (btnText) btnText.textContent = "Generate Link";
+            btnIcon?.classList.remove("hidden");
+            btnLoader?.classList.add("hidden");
+        }
+    });
+
+    ui.copyBtn?.addEventListener("click", () => {
+        navigator.clipboard.writeText(ui.resultInput.value);
+        showToast("Copied", "Link copied to clipboard.", "success");
+    });
+
+    ui.downloadQrBtn?.addEventListener("click", () => {
+        if (!ui.qrCanvas || !ui.resultInput.value) return;
+
+        const shortLink = ui.resultInput.value;
+        let idPart = "link";
+        try {
+            const urlObj = new URL(shortLink);
+            const pathParts = urlObj.pathname.split("/").filter(Boolean);
+            if (pathParts.length > 0) {
+                idPart = pathParts[pathParts.length - 1];
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        const link = document.createElement("a");
+        link.download = `qrcode-${idPart}.png`;
+        link.href = ui.qrCanvas.toDataURL("image/png");
+        link.click();
+    });
+
+    ui.toastClose?.addEventListener("click", hideToast);
+
+    init();
+</script>

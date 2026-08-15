@@ -1,0 +1,531 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import pages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+
+const page = pages.find((p) => p.slug === "latex-to-image")!;
+---
+
+<BaseLayout title={`${page.title} - Rafif Muchsin`} description={page.description}>
+  <div class="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-6">
+    <div class="text-center max-w-xl mx-auto mb-4">
+      <h1 class="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
+        {page.title}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {page.description}
+      </p>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Input & Preview (Left 2 columns) -->
+      <div class="md:col-span-2 flex flex-col gap-6">
+        <!-- Input Panel -->
+        <div class="border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-foreground">LaTeX Input</h3>
+          </div>
+          <textarea
+            id="latex-input"
+            placeholder="e.g. \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}"
+            class="h-32 p-4 text-sm bg-accent border border-border rounded-xl focus:outline-none focus:border-outline resize-none font-mono text-foreground"
+          ></textarea>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Preview</h3>
+
+          <!-- Outer border/padding container -->
+          <div
+            id="preview-container"
+            class="border border-border rounded-xl p-6 flex items-center justify-center min-h-45 relative overflow-hidden transition-all bg-white text-black"
+          >
+            <!-- Scrollable inner container -->
+            <div
+              id="math-scroll-wrapper"
+              class="w-full overflow-x-auto py-4"
+            >
+              <div id="math-preview" class="text-inherit">
+                <span class="text-xs text-muted-foreground">Enter LaTeX code above to render</span>
+              </div>
+            </div>
+
+            <!-- Loader Overlay -->
+            <div id="latex-loading" class="hidden absolute inset-0 bg-muted/85 items-center justify-center text-xs text-muted-foreground select-none [&:not(.hidden)]:flex">
+              Loading rendering engine...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings & Download Actions (Right 1 column) -->
+      <div class="flex flex-col gap-6">
+        <!-- Customization Settings -->
+        <div class="border border-border rounded-xl bg-card p-5 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Styling Settings</h3>
+
+          <div class="flex flex-col gap-3 py-1">
+            <!-- Invert Color Toggle -->
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <input type="checkbox" id="invert-toggle" class="rounded border-border bg-accent text-foreground focus:ring-0 w-4 h-4 cursor-pointer" />
+              <div class="flex flex-col">
+                <span class="text-xs font-medium text-foreground">Invert Color</span>
+                <span class="text-[10px] text-muted-foreground">Switch to dark mode (white on dark)</span>
+              </div>
+            </label>
+
+            <!-- Transparent Toggle -->
+            <label class="flex items-center gap-2.5 cursor-pointer select-none border-t border-border pt-3 mt-1">
+              <input type="checkbox" id="transparent-toggle" class="rounded border-border bg-accent text-foreground focus:ring-0 w-4 h-4 cursor-pointer" />
+              <div class="flex flex-col">
+                <span class="text-xs font-medium text-foreground">Transparent Background</span>
+                <span class="text-[10px] text-muted-foreground">Remove solid background color</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Output & Download Settings -->
+        <div class="border border-border rounded-xl bg-card p-5 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Download Settings</h3>
+
+          <div class="flex flex-col gap-1.5">
+            <label for="scale-select" class="text-xs text-muted-foreground">Resolution Scaling</label>
+            <select
+              id="scale-select"
+              class="h-9 px-3 text-xs border border-input dark:bg-input/30 text-foreground bg-transparent rounded-md focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] focus-visible:ring-3 outline-none w-full cursor-pointer"
+            >
+              <option value="1">1x (Default size)</option>
+              <option value="2">2x (High resolution)</option>
+              <option value="3" selected>3x (Super resolution)</option>
+              <option value="4">4x (Retina / Print quality)</option>
+              <option value="5">5x (Ultra crisp)</option>
+              <option value="8">8x (Poster size)</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <Button
+              id="btn-download-png"
+              variant="default"
+              size="sm"
+              class="w-full font-semibold"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Download PNG
+            </Button>
+            <Button
+              id="btn-download-jpg"
+              variant="outline"
+              size="sm"
+              class="w-full font-semibold"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Download JPG
+            </Button>
+            <Button
+              id="btn-download-svg"
+              variant="ghost"
+              size="sm"
+              class="w-full font-semibold border border-border"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Download SVG (Vector)
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  /* Custom scrollable centering rules for math formula overflows */
+  #math-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: block;
+    text-align: center;
+  }
+  #math-preview {
+    display: inline-block;
+    min-width: max-content;
+    text-align: center;
+    padding: 0 16px;
+    vertical-align: middle;
+  }
+
+  /* Force math preview text and SVG elements to inherit color chosen by color modes */
+  #math-preview,
+  #math-preview .katex,
+  #math-preview .katex * {
+    color: inherit !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  /* Professional checkerboard transparency pattern */
+  .preview-checkered {
+    background-image: linear-gradient(45deg, var(--muted) 25%, transparent 25%),
+                      linear-gradient(-45deg, var(--muted) 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, var(--muted) 75%),
+                      linear-gradient(-45deg, transparent 75%, var(--muted) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    background-color: var(--card) !important;
+  }
+</style>
+
+<script>
+  import { loadKaTeX } from "../utils/latex/loader";
+
+  // Elements
+  const latexInput = document.getElementById("latex-input") as HTMLTextAreaElement;
+  const mathPreview = document.getElementById("math-preview")!;
+  const latexLoading = document.getElementById("latex-loading")!;
+  const previewContainer = document.getElementById("preview-container")!;
+
+  const invertToggle = document.getElementById("invert-toggle") as HTMLInputElement;
+  const transparentToggle = document.getElementById("transparent-toggle") as HTMLInputElement;
+
+  const scaleSelect = document.getElementById("scale-select") as HTMLSelectElement;
+  const btnDownloadPng = document.getElementById("btn-download-png")!;
+  const btnDownloadJpg = document.getElementById("btn-download-jpg")!;
+  const btnDownloadSvg = document.getElementById("btn-download-svg")!;
+
+  // Constants
+  const STORAGE_KEY = "latex_settings_v2";
+  let katexLib: any = null;
+  let mathjaxLib: any = null;
+  let isDisplayMode = true; // Auto-detected from math delimiters
+
+  // Defaults
+  const defaults = {
+    isInverted: false,
+    isTransparent: false
+  };
+
+  // State
+  let state = { ...defaults };
+
+  // Load state from local storage
+  function loadCachedState() {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        state = { ...defaults, ...parsed };
+      }
+    } catch (e) {
+      console.warn("Failed to load settings from LocalStorage:", e);
+    }
+
+    // Apply state to inputs
+    invertToggle.checked = state.isInverted;
+    transparentToggle.checked = state.isTransparent;
+
+    updateStyles();
+  }
+
+  // Save state to local storage
+  function saveCachedState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn("Failed to save settings to LocalStorage:", e);
+    }
+  }
+
+  // Helper to dynamically load MathJax v3 with config parameters in place before load
+  function loadMathJax(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if ((window as any).MathJax && (window as any).MathJax.tex2svg) {
+        resolve((window as any).MathJax);
+        return;
+      }
+
+      // Configure MathJax to render self-contained SVGs with internal path defs (local caching)
+      (window as any).MathJax = {
+        options: {
+          enableMenu: false
+        },
+        svg: {
+          fontCache: 'local'
+        },
+        startup: {
+          ready: () => {
+            (window as any).MathJax.startup.defaultReady();
+            resolve((window as any).MathJax);
+          }
+        }
+      };
+
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js";
+      script.async = true;
+      script.onerror = (err) => reject(err);
+      document.head.appendChild(script);
+    });
+  }
+
+  // Sync styles on changes
+  function updateStyles() {
+    // 1. Text color setting
+    const textColor = state.isInverted ? "#fafafa" : "#010100";
+    previewContainer.style.color = textColor;
+    mathPreview.style.color = textColor;
+
+    // 2. Background color setting
+    if (state.isTransparent) {
+      previewContainer.classList.add("preview-checkered");
+      previewContainer.style.backgroundColor = "";
+    } else {
+      previewContainer.classList.remove("preview-checkered");
+      previewContainer.style.backgroundColor = state.isInverted ? "var(--card)" : "#ffffff";
+    }
+  }
+
+  // Detect wrapper, strip out outer delimiters, and infer display mode
+  function detectAndCleanWrapper(input: string) {
+    let formula = input.trim();
+
+    if (formula.startsWith("$$") && formula.endsWith("$$")) {
+      isDisplayMode = true;
+      formula = formula.substring(2, formula.length - 2).trim();
+    } else if (formula.startsWith("\\[") && formula.endsWith("\\]")) {
+      isDisplayMode = true;
+      formula = formula.substring(2, formula.length - 2).trim();
+    } else if (formula.startsWith("\\(") && formula.endsWith("\\)")) {
+      isDisplayMode = false;
+      formula = formula.substring(2, formula.length - 2).trim();
+    } else if (formula.startsWith("$") && formula.endsWith("$")) {
+      isDisplayMode = false;
+      formula = formula.substring(1, formula.length - 1).trim();
+    } else {
+      isDisplayMode = true; // Default raw input to standard block display mode
+    }
+
+    return formula;
+  }
+
+  // Render Math Preview (KaTeX for fast typing performance)
+  async function renderMath() {
+    const rawFormula = latexInput.value.trim();
+    if (!rawFormula) {
+      mathPreview.innerHTML = `<span class="text-xs text-muted-foreground">Enter LaTeX code above to render</span>`;
+      mathPreview.style.color = "inherit";
+      return;
+    }
+
+    // Lazy load library
+    if (!katexLib) {
+      latexLoading.classList.remove("hidden");
+      try {
+        katexLib = await loadKaTeX();
+      } catch (err) {
+        console.error("Failed to load KaTeX engine/styles:", err);
+        mathPreview.innerHTML = `<span class="text-danger text-xs">Error loading KaTeX library</span>`;
+        return;
+      } finally {
+        latexLoading.classList.add("hidden");
+      }
+    }
+
+    // Auto-detect, strip outer delimiters, and set rendering mode
+    const cleanedFormula = detectAndCleanWrapper(rawFormula);
+
+    // Help handle newlines: if it has newlines (\\) and no block \begin environment, wrap it in gathered
+    let formulaToRender = cleanedFormula;
+    if (cleanedFormula.includes("\\\\") && !cleanedFormula.includes("\\begin{")) {
+      formulaToRender = `\\begin{gathered}${cleanedFormula}\\end{gathered}`;
+    }
+
+    try {
+      katexLib.render(formulaToRender, mathPreview, {
+        displayMode: isDisplayMode,
+        throwOnError: false,
+        trust: false
+      });
+
+      updateStyles();
+    } catch (e: any) {
+      mathPreview.innerHTML = `<span class="text-danger text-xs">${e.message}</span>`;
+    }
+  }
+
+  invertToggle.addEventListener("change", (e) => {
+    state.isInverted = (e.target as HTMLInputElement).checked;
+    saveCachedState();
+    updateStyles();
+    renderMath();
+  });
+
+  transparentToggle.addEventListener("change", (e) => {
+    state.isTransparent = (e.target as HTMLInputElement).checked;
+    saveCachedState();
+    updateStyles();
+    renderMath();
+  });
+
+  latexInput.addEventListener("input", renderMath);
+
+  // Initialize
+  loadCachedState();
+  renderMath();
+
+  // ==================== IMAGE DOWNLOAD & SCALING LOGIC ====================
+  async function triggerDownload(format: "png" | "jpg" | "svg") {
+    const rawFormula = latexInput.value.trim();
+    if (!rawFormula) {
+      alert("Please render a valid equation first.");
+      return;
+    }
+
+    latexLoading.classList.remove("hidden");
+
+    // Dynamic load MathJax v3 for flawless path-based exports (bypass SecurityError completely)
+    try {
+      if (!mathjaxLib) {
+        mathjaxLib = await loadMathJax();
+      }
+
+      // Auto-detect and strip delimiters (syncs display mode state)
+      const cleanedFormula = detectAndCleanWrapper(rawFormula);
+
+      // Handle newlines
+      let formulaToRender = cleanedFormula;
+      if (cleanedFormula.includes("\\\\") && !cleanedFormula.includes("\\begin{")) {
+        formulaToRender = `\\begin{gathered}${cleanedFormula}\\end{gathered}`;
+      }
+
+      // Render math formula into pure SVG using MathJax v3
+      const mathNode = mathjaxLib.tex2svg(formulaToRender, { display: isDisplayMode });
+      const originalSvg = mathNode.querySelector("svg");
+      if (!originalSvg) {
+        throw new Error("MathJax failed to output an SVG node.");
+      }
+
+      // Clone SVG node to prevent mutating view
+      const svgElement = originalSvg.cloneNode(true) as SVGElement;
+
+      // Extract pixel bounding box size by temporarily appending to document
+      svgElement.style.position = "absolute";
+      svgElement.style.visibility = "hidden";
+      document.body.appendChild(svgElement);
+      const rect = svgElement.getBoundingClientRect();
+      const innerWidth = Math.ceil(rect.width);
+      const innerHeight = Math.ceil(rect.height);
+      document.body.removeChild(svgElement);
+
+      const padding = 24;
+      const width = innerWidth + padding * 2;
+      const height = innerHeight + padding * 2;
+
+      const scale = format === "svg" ? 1 : parseInt(scaleSelect.value);
+      const mathBgColor = state.isTransparent ? "transparent" : (state.isInverted ? "#09090b" : "#ffffff");
+      const mathTextColor = state.isInverted ? "#fafafa" : "#000000";
+
+      // Update inner MathJax SVG sizing properties to use absolute pixels instead of relative font 'ex' units
+      // This is crucial because when SVG runs outside HTML document font-contexts, 'ex' units collapse to 0px
+      svgElement.setAttribute("width", `${innerWidth}`);
+      svgElement.setAttribute("height", `${innerHeight}`);
+      svgElement.removeAttribute("style");
+
+      svgElement.style.color = mathTextColor;
+      svgElement.setAttribute("color", mathTextColor);
+
+      // Extract MathJax SVG styles to embed inside the output SVG
+      let mathjaxStyles = "";
+      const styleElement = document.getElementById("MJX-SVG-styles");
+      if (styleElement) {
+        mathjaxStyles = styleElement.innerHTML;
+      } else {
+        try {
+          const sheet = mathjaxLib.svgStylesheet();
+          mathjaxStyles = sheet instanceof HTMLElement ? sheet.innerHTML : String(sheet);
+        } catch (e) {
+          console.warn("Failed to get MathJax stylesheet:", e);
+        }
+      }
+
+      // Construct a clean, padded outer SVG container containing pure vector shapes (paths) and alignment stylesheets
+      const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+          <style>
+            ${mathjaxStyles}
+            svg { color: ${mathTextColor}; }
+          </style>
+          ${!state.isTransparent && format !== "png" ? `<rect width="100%" height="100%" fill="${mathBgColor}" />` : ""}
+          ${!state.isTransparent && format === "png" ? `<rect width="100%" height="100%" fill="${mathBgColor}" />` : ""}
+          <g transform="translate(${padding}, ${padding})">
+            ${svgElement.outerHTML}
+          </g>
+        </svg>
+      `;
+
+      // SVG file direct text download (Crisp Vector file, 0 external font dependencies)
+      if (format === "svg") {
+        const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+        const URL = window.URL || window.webkitURL || window;
+        const blobURL = URL.createObjectURL(svgBlob);
+        const link = document.createElement("a");
+        link.download = `latex-math.svg`;
+        link.href = blobURL;
+        link.click();
+        URL.revokeObjectURL(blobURL);
+        return;
+      }
+
+      // Convert SVG to dataURL for canvas PNG/JPG downloads (No SecurityError because there is no foreignObject)
+      const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext("2d")!;
+
+        ctx.scale(scale, scale);
+
+        if (format === "jpg") {
+          ctx.fillStyle = mathBgColor === "transparent" ? "#ffffff" : mathBgColor;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        const mime = format === "png" ? "image/png" : "image/jpeg";
+        const quality = format === "png" ? undefined : 0.95;
+        const finalDataUrl = canvas.toDataURL(mime, quality);
+
+        const link = document.createElement("a");
+        link.download = `latex-math.${format}`;
+        link.href = finalDataUrl;
+        link.click();
+
+        URL.revokeObjectURL(blobURL);
+      };
+      img.onerror = (e) => {
+        console.error("Image loading failed:", e);
+        URL.revokeObjectURL(blobURL);
+      };
+      img.src = blobURL;
+
+    } catch (err) {
+      console.error("MathJax compiler export failed:", err);
+      alert("Failed to render LaTeX. Please try downloading as SVG (Vector) format instead!");
+    } finally {
+      latexLoading.classList.add("hidden");
+    }
+  }
+
+  btnDownloadPng.addEventListener("click", () => triggerDownload("png"));
+  btnDownloadJpg.addEventListener("click", () => triggerDownload("jpg"));
+  btnDownloadSvg.addEventListener("click", () => triggerDownload("svg"));
+</script>

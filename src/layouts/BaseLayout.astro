@@ -1,0 +1,55 @@
+---
+import "@/styles/starwind.css";
+import "@/styles/globals.css";
+import Head from "../components/Head.astro";
+import Topbar from "../components/Topbar.astro";
+
+export interface Props {
+  title: string;
+  description: string;
+  showTopbar?: boolean;
+  topbarTitle?: string;
+}
+
+const { title, description, showTopbar = true, topbarTitle } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <Head title={title} description={description} />
+  </head>
+  <body class="bg-background text-foreground antialiased min-h-dvh flex flex-col">
+    {
+      showTopbar && (
+        <Topbar title={topbarTitle || title.replace(' - Rafif Muchsin', '')}>
+          <slot name="topbar-actions" slot="actions" />
+        </Topbar>
+      )
+    }
+    <main class="flex-1 font-sans">
+      <slot />
+    </main>
+    <footer class="flex items-center justify-between h-10 px-4 border-t border-border bg-card text-xs text-muted-foreground">
+      <span>
+        <a href="https://x.com/rafifmsn" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground! transition-colors underline">𝕏/@rafifmsn</a>
+      </span>
+      <div class="flex items-center gap-4">
+        <a href="/privacy" class="hover:text-foreground! transition-colors">Privacy</a>
+        <a href="/terms" class="hover:text-foreground! transition-colors">Terms</a>
+        <a href="https://go.rafifmsn.com/contact-form" target="_blank" rel="noopener noreferrer" class="hover:text-foreground! transition-colors">Suggestions</a>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+  }
+</style>

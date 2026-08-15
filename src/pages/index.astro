@@ -1,0 +1,253 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import DynamicIcon from "../components/DynamicIcon.astro";
+import rawPages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+import { Input } from "@/components/starwind/input";
+
+interface PageItem {
+  slug: string;
+  title: string;
+  description: string;
+  type: string;
+  icon: string;
+  link?: string;
+}
+
+const pages = rawPages as PageItem[];
+---
+
+<BaseLayout title="Productivity Tools - Rafif Muchsin" description="A collection of privacy-first productivity tools." showTopbar={false}>
+  <div class="flex flex-col items-center min-h-0 max-w-4xl mx-auto px-6 my-16 sm:my-24">
+    <!-- Hero -->
+    <section class="text-center max-w-2xl mb-6">
+      <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mb-4">
+        rafifmsn/tool
+      </h1>
+      <p class="text-sm lg:text-md text-muted-foreground leading-relaxed text-balance">
+        A collection of privacy-first productivity tools.
+      </p>
+    </section>
+
+    <!-- Search & Filters Container -->
+    <div class="w-full max-w-xl mx-auto mb-10 flex flex-col gap-4">
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-muted-foreground z-10">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <Input
+          type="text"
+          id="search-input"
+          placeholder="Search tools... (Press '/' to focus)"
+          class="w-full pl-10 pr-10"
+        />
+        <button
+          id="btn-clear-search"
+          class="absolute inset-y-0 right-0 items-center pr-3.5 text-muted-foreground hover:text-foreground hidden cursor-pointer z-10 [&:not(.hidden)]:flex"
+          aria-label="Clear search"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex flex-wrap items-center justify-center gap-2" id="category-filters">
+        <Button
+          data-category="all"
+          variant="default"
+          size="sm"
+          class="h-8 px-4 rounded-lg text-xs font-semibold shadow-xs"
+        >
+          All Tools
+        </Button>
+        <Button
+          data-category="page"
+          variant="outline"
+          size="sm"
+          class="h-8 px-4 rounded-lg text-xs font-semibold text-muted-foreground"
+        >
+          Built-in
+        </Button>
+        <Button
+          data-category="external"
+          variant="outline"
+          size="sm"
+          class="h-8 px-4 rounded-lg text-xs font-semibold text-muted-foreground"
+        >
+          External
+        </Button>
+      </div>
+
+      <!-- Results Count Info -->
+      <div id="search-info" class="text-center text-sm text-muted-foreground hidden">
+        Showing <span id="search-count" class="font-semibold text-muted-foreground">0</span> matching tools
+      </div>
+    </div>
+
+    <!-- Tools Grid -->
+    <section class="w-full">
+      <div id="tools-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {
+          pages.map((page) => {
+            const href = page.link || `/${page.slug}`;
+            const isExternal = page.link ? true : false;
+            return (
+              <a
+                href={href}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                data-title={page.title.toLowerCase()}
+                data-desc={page.description.toLowerCase()}
+                data-type={page.type}
+                class="tool-card group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:bg-muted hover:border-outline transition-all no-underline"
+              >
+                <div class="shrink-0 w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-muted-foreground group-hover:text-foreground! transition-colors">
+                  <DynamicIcon name={page.icon} size={20} className="shrink-0" />
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">
+                    {page.title}
+                  </h3>
+                    <p class="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {page.description}
+                  </p>
+                </div>
+              </a>
+            );
+          })
+        }
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-16 flex-col items-center gap-3 [&:not(.hidden)]:flex">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg>
+        <span class="text-sm text-muted-foreground">No tools match your query</span>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* CSS-Only Scalability Optimization for 1,000+ nodes */
+  .tool-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 80px 240px;
+  }
+</style>
+
+<script>
+  const searchInput = document.getElementById("search-input") as HTMLInputElement;
+  const clearSearchBtn = document.getElementById("btn-clear-search")!;
+  const categoryFilters = document.getElementById("category-filters")!;
+  const filterButtons = categoryFilters.querySelectorAll("button");
+  const toolsGrid = document.getElementById("tools-grid")!;
+  const cards = toolsGrid.querySelectorAll(".tool-card");
+  const emptyState = document.getElementById("empty-state")!;
+  const searchInfo = document.getElementById("search-info")!;
+  const searchCount = document.getElementById("search-count")!;
+
+  let activeCategory = "all";
+  let searchQuery = "";
+
+  // Keyboard shortcut '/' to focus search
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  // Search input typing listener
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = (e.target as HTMLInputElement).value;
+
+    // Toggle clear button
+    if (searchQuery.trim().length > 0) {
+      clearSearchBtn.classList.remove("hidden");
+    } else {
+      clearSearchBtn.classList.add("hidden");
+    }
+
+    filterTools();
+  });
+
+  // Clear search button handler
+  clearSearchBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    searchQuery = "";
+    clearSearchBtn.classList.add("hidden");
+    filterTools();
+    searchInput.focus();
+  });
+
+  // Category pill handlers
+  filterButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const category = btn.getAttribute("data-category")!;
+      if (category === activeCategory) return;
+
+      activeCategory = category;
+
+      // Update pill classes
+      filterButtons.forEach((b) => {
+        if (b === btn) {
+          b.className = "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-8 px-4 text-xs bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
+        } else {
+          b.className = "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-8 px-4 text-xs dark:border-input focus-visible:ring-outline/50 bg-background dark:bg-input/30 focus-visible:border-outline hover:bg-muted dark:hover:bg-input/50 hover:text-foreground border shadow-xs text-muted-foreground";
+        }
+      });
+
+      filterTools();
+    });
+  });
+
+  // Main filter function
+  function filterTools() {
+    let matchCount = 0;
+    const query = searchQuery.trim().toLowerCase();
+    const tokens = query.split(/\s+/).filter(Boolean);
+
+    cards.forEach((cardEl) => {
+      const card = cardEl as HTMLElement;
+      const title = card.getAttribute("data-title") || "";
+      const desc = card.getAttribute("data-desc") || "";
+      const type = card.getAttribute("data-type") || "";
+
+      // Match category filter
+      const matchesCategory = activeCategory === "all" || type === activeCategory;
+
+      // Match multi-token query
+      let matchesSearch = true;
+      if (tokens.length > 0) {
+        matchesSearch = tokens.every(
+          (token) => title.includes(token) || desc.includes(token)
+        );
+      }
+
+      // Hide or show
+      if (matchesCategory && matchesSearch) {
+        card.classList.remove("hidden");
+        matchCount++;
+      } else {
+        card.classList.add("hidden");
+      }
+    });
+
+    // Handle Empty State
+    if (matchCount === 0) {
+      emptyState.classList.remove("hidden");
+      toolsGrid.classList.add("hidden");
+    } else {
+      emptyState.classList.add("hidden");
+      toolsGrid.classList.remove("hidden");
+    }
+
+    // Handle Results Badge
+    if (query || activeCategory !== "all") {
+      searchInfo.classList.remove("hidden");
+      searchCount.textContent = matchCount.toString();
+    } else {
+      searchInfo.classList.add("hidden");
+    }
+  }
+</script>

@@ -1,0 +1,120 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { Download, Upload } from '@lucide/astro';
+import Topbar from '../components/navigation/Topbar.astro';
+---
+
+<BaseLayout title="Kanban - Rafif Muchsin" description="Clear your mental clutter and boost daily productivity. Try a web-based Kanban designed to balance your workload and simplify your personal life.">
+  <body class="h-full w-full overflow-hidden bg-background">
+    <div id="app-root" class="flex flex-col h-full w-full">
+      <!-- Topbar (minimal) -->
+      <Topbar subTitle="Kanban">
+        <button id="btn-import-kanban" class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer" title="Import Kanban cards">
+          <Upload size={12} />
+          <span>Import</span>
+        </button>
+        <button id="btn-export-kanban" class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer" title="Export Kanban cards">
+          <Download size={12} />
+          <span>Export</span>
+        </button>
+      </Topbar>
+
+      <!-- Hidden file input for import -->
+      <input type="file" id="kanban-import-input" accept=".json" class="hidden" />
+
+      <div id="kanban-board" class="flex-1 overflow-hidden"></div>
+    </div>
+  </body>
+</BaseLayout>
+
+<script>
+import { KanbanBoard } from '../components/kanban/KanbanBoard';
+import { getKanbanCards, saveKanbanCard, generateId, initDefaultTabs, getTabs } from '../services/db';
+
+// Initialize tabs so __activeTabId is available
+let activeTabId = '';
+initDefaultTabs().then((tabs) => {
+  const saved = localStorage.getItem('note-active-tab');
+  if (saved && tabs.some((t) => t.id === saved)) {
+    activeTabId = saved;
+  } else {
+    activeTabId = tabs[0]?.id || '';
+  }
+  // Reload board now that we have the proper tabId
+  document.dispatchEvent(new CustomEvent('kanban-reload'));
+});
+
+Object.defineProperty(window, '__activeTabId', {
+  get: () => activeTabId,
+  configurable: true,
+});
+
+const boardContainer = document.getElementById('kanban-board');
+let board: KanbanBoard | null = null;
+if (boardContainer) {
+  board = new KanbanBoard(boardContainer);
+}
+
+// ── Export ──
+document.getElementById('btn-export-kanban')?.addEventListener('click', async () => {
+  const cards = await getKanbanCards();
+  const data = JSON.stringify({ version: 1, cards }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kanban-export-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ── Import ──
+document.getElementById('btn-import-kanban')?.addEventListener('click', () => {
+  document.getElementById('kanban-import-input')?.click();
+});
+
+document.getElementById('kanban-import-input')?.addEventListener('change', async (e) => {
+  const input = e.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) {
+    alert('No file selected.');
+    return;
+  }
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.cards || !Array.isArray(data.cards)) {
+      alert('Invalid kanban file format.');
+      return;
+    }
+
+    // Get current active tab
+    const tabs = await getTabs();
+    const activeTabId = tabs[0]?.id || '';
+
+    for (const card of data.cards) {
+      await saveKanbanCard({
+        id: generateId(),
+        title: card.title || 'Untitled',
+        description: card.description || '',
+        column: card.column || 'todo',
+        order: card.order ?? 0,
+        tabId: card.tabId || activeTabId,
+        createdAt: card.createdAt || Date.now(),
+      });
+    }
+    document.dispatchEvent(new CustomEvent('kanban-reload'));
+    alert(`Imported ${data.cards.length} card(s) successfully.`);
+  } catch (err) {
+    alert('Failed to import kanban file. Make sure it is a valid JSON file.');
+    console.error('Import error:', err);
+  }
+  input.value = '';
+});
+</script>
+
+<style>
+  :root { height: 100%; }
+  body { height: 100%; margin: 0; padding: 0; }
+</style>

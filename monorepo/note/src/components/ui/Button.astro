@@ -1,0 +1,26 @@
+---
+export interface Props {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+const { variant = 'primary', size = 'md', class: className = '' } = Astro.props;
+
+const cls = 'inline-flex items-center justify-center rounded-md font-medium cursor-pointer select-none transition-colors duration-150 ease-out disabled:opacity-40 disabled:pointer-events-none';
+
+const variants: Record<string, string> = {
+  primary: 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover-bg)]',
+  secondary: 'bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-text)] border border-[var(--btn-secondary-border)] hover:bg-[var(--btn-secondary-hover-bg)]',
+  ghost: 'bg-transparent text-[var(--btn-ghost-text)] hover:bg-[var(--btn-ghost-hover-bg)] hover:text-[var(--btn-ghost-hover-text)]',
+};
+
+const sizes: Record<string, string> = {
+  sm: 'h-7 px-2.5 text-xs',
+  md: 'h-8 px-3 text-sm',
+};
+---
+
+<button class={`${cls} ${variants[variant]} ${sizes[size]} ${className}`} {...Astro.props}>
+  <slot />
+</button>

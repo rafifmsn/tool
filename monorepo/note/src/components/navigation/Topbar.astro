@@ -1,0 +1,180 @@
+---
+/**
+ * Topbar — app logo, sidebar toggle, preview toggle, export dropdown.
+ */
+
+import { Eye, StepBack, FileText, FileCode, Archive, ChevronDown } from "@lucide/astro";
+
+interface Props {
+  subTitle?: string;
+  showSidebarToggle?: boolean;
+  showEditorActions?: boolean;
+}
+
+const { subTitle, showSidebarToggle = false, showEditorActions = false } = Astro.props;
+---
+
+<div
+  id="topbar"
+  class="flex items-center justify-between h-12 px-4 border-b border-border bg-card"
+>
+  <div class="flex items-center gap-2">
+    {showSidebarToggle && (
+      <button
+        id="btn-toggle-sidebar"
+        class="icon-btn-2 w-7! h-7!"
+        aria-label="Toggle sidebar"
+        title="Toggle sidebar"
+      >
+        <span 
+          id="sidebar-arrow" 
+          class="text-sm leading-none block transition-transform duration-200"
+        >
+          <StepBack size={14} />
+        </span>
+      </button>
+    )}
+    <a href="/" id="logo-link" class="text-sm font-semibold text-foreground no-underline font-secondary tracking-tight">
+      Note
+    </a>
+    {subTitle && (
+      <>
+        <span class="text-muted-foreground text-xs">/</span>
+        <span class="text-sm text-muted-foreground">{subTitle}</span>
+      </>
+    )}
+  </div>
+
+  <div class="flex items-center gap-2">
+    <slot />
+
+    {showEditorActions && (
+      <>
+        <button
+          id="btn-toggle-preview"
+          class="icon-btn-2 w-7! h-7! hidden"
+          aria-label="Toggle preview"
+          title="Toggle preview"
+        >
+          <Eye size={14} />
+        </button>
+ 
+        <div class="relative hidden" id="export-container">
+          <button
+            id="btn-export"
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer"
+          >
+            <span>Export</span>
+            <ChevronDown size={12} class="opacity-60" />
+          </button>
+ 
+          <div
+            id="export-dropdown"
+            class="hidden absolute right-0 top-full mt-1 z-40 min-w-50 rounded-lg border border-border bg-popover p-1 shadow-lg fade-in"
+          >
+            <button class="export-option w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer" data-action="md">
+              <FileText size={14} /> Download as Markdown
+            </button>
+            <button class="export-option w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer" data-action="pdf">
+              <FileCode size={14} /> Download as PDF
+            </button>
+            <div class="h-px bg-border my-1"></div>
+            <button class="export-option w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer" data-action="tab-zip">
+              <Archive size={14} /> Export Tab (ZIP)
+            </button>
+            <button class="export-option w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer" data-action="zip">
+              <Archive size={14} /> Export All (ZIP)
+            </button>
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+</div>
+
+<script>
+// Fixed: Handled explicit .ts string imports automatically via bundler resolution rules
+import { getAllFiles, getAllAssets, getFile, getTabs } from '../../services/db';
+import { downloadAsMarkdown, downloadAsPDF, exportAllAsZip, exportTabAsZip } from '../../utils/export';
+
+// Element selectors
+const sidebarBtnElement = document.getElementById('btn-toggle-sidebar');
+const sidebarArrow = document.getElementById('sidebar-arrow');
+const previewBtn = document.getElementById('btn-toggle-preview');
+const exportContainer = document.getElementById('export-container');
+const exportBtn = document.getElementById('btn-export');
+const dropdown = document.getElementById('export-dropdown');
+
+// Sidebar layout state dispatcher + clean text rotation
+sidebarBtnElement?.addEventListener('click', () => {
+  sidebarArrow?.classList.toggle('rotate-180');
+  document.dispatchEvent(new CustomEvent('toggle-sidebar'));
+});
+
+// The Sync Watchdog for the export container
+if (previewBtn && exportContainer) {
+  const observer = new MutationObserver(() => {
+    if (previewBtn.classList.contains('hidden')) {
+      exportContainer.classList.add('hidden');
+      dropdown?.classList.add('hidden'); 
+    } else {
+      exportContainer.classList.remove('hidden');
+    }
+  });
+  observer.observe(previewBtn, { attributes: true, attributeFilter: ['class'] });
+}
+
+// Export dropdown display toggle
+exportBtn?.addEventListener('click', () => {
+  dropdown?.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+  if (dropdown && !dropdown.classList.contains('hidden') && !exportBtn?.contains(e.target as Node)) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+// Export actions router mapping
+document.querySelectorAll('.export-option').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    dropdown?.classList.add('hidden');
+    const action = (btn as HTMLElement).dataset.action;
+
+    if (action === 'zip') {
+      const files = await getAllFiles();
+      const assets = await getAllAssets();
+      await exportAllAsZip(files, assets);
+      return;
+    }
+
+    if (action === 'tab-zip') {
+      const tabs = await getTabs();
+      const activeTabId = (window as any).__activeTabId;
+      const tabName = tabs.find((t) => t.id === activeTabId)?.name || 'tab';
+      const files = await getAllFiles(activeTabId || undefined);
+      const assets = await getAllAssets(activeTabId || undefined);
+      await exportTabAsZip(files, assets, tabName);
+      return;
+    }
+
+    const fileId = (window as any).__activeFileId;
+    if (!fileId) return;
+    const file = await getFile(fileId);
+    if (!file) return;
+
+    if (action === 'md') {
+      downloadAsMarkdown(file);
+    } else if (action === 'pdf') {
+      const previewEl = document.querySelector('#preview-container');
+      if (previewEl) {
+        await downloadAsPDF(previewEl as HTMLElement, file.name);
+      }
+    }
+  });
+});
+
+document.getElementById('btn-toggle-preview')?.addEventListener('click', () => {
+  document.dispatchEvent(new CustomEvent('toggle-preview'));
+});
+</script>

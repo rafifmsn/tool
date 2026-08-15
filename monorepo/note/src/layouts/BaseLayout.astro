@@ -1,0 +1,42 @@
+---
+import "@/styles/starwind.css";
+import '../styles/globals.css';
+import Head from '../components/Head.astro';
+import { Font } from 'astro:assets';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+}
+
+const { 
+  title = 'Markdown Editor - Rafif Muchsin', 
+  description = 'A stateless local markdown editor featuring full LaTeX math parsing, live rendering, asset attachments, and complete codebase ZIP compilation.', 
+  ogImage = '/og.png'
+} = Astro.props;
+
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <Font cssVariable="--font-sans" />
+    <Font cssVariable="--font-mono" />
+    <meta name="color-scheme" content="dark" />
+    <Head title={title} description={description} ogImage={ogImage} />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
+    <script type="importmap">
+      {
+        "imports": {
+          "mermaid": "https://esm.sh/mermaid@11.4.0",
+          "shiki": "https://esm.sh/shiki@4.2.0"
+        }
+      }
+    </script>
+    <script defer src="https://analytics.rafifmsn.com/script.js" data-website-id="d6617bad-0458-4854-9990-236c42d79ab7"></script>
+  </head>
+  <body class="bg-background text-foreground antialiased min-h-screen flex flex-col">
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,581 @@
+---
+/**
+ * EditorPanel — wraps Editor + Preview with a resizable 50/50 split.
+ * Optimized for mobile to default to a single-pane viewport.
+ */
+---
+
+<div class="flex flex-col h-full w-full overflow-hidden">
+  <div id="editor-panel" class="flex flex-1 w-full overflow-hidden">
+    <div
+      id="editor-container"
+      class="overflow-hidden min-w-0 h-full border-r border-editor-border"
+      style="width: var(--editor-ratio, 50%); flex: 0 0 auto;"
+    >
+    </div>
+
+    <div
+      id="resize-handle"
+      class="hidden md:block w-1 cursor-col-resize bg-transparent hover:bg-muted-foreground active:bg-foreground transition-colors shrink-0 relative z-10"
+      title="Drag to resize"
+    >
+    </div>
+
+    <div
+      id="preview-container"
+      class="preview-side min-w-0 bg-transparent overflow-x-auto"
+      style="width: calc(100% - var(--editor-ratio, 50%) - 4px); flex: 0 0 auto;"
+    >
+      <div
+        class="flex items-center justify-center h-full text-muted-foreground text-sm unique-empty-msg"
+      >
+        <p>Start typing to see the preview</p>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="editor-status-bar"
+    class="flex items-center justify-between h-7 px-3 border-t border-border bg-card text-xs text-muted-foreground shrink-0 overflow-x-auto min-w-50"
+  >
+    <div class="flex items-center gap-3 shrink-0">
+      <button
+        id="btn-toggle-count"
+        class="hover:text-foreground transition-colors cursor-pointer whitespace-nowrap"
+        title="Click to toggle between char and token count"
+      >
+        <span id="count-display">Char: 0</span>
+      </button>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button
+        id="btn-share"
+        class="flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer px-2 py-0.5 rounded whitespace-nowrap"
+        title="Share this note"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline
+            points="16 6 12 2 8 6"></polyline><line
+            x1="12"
+            x2="12"
+            y1="2"
+            y2="15"></line></svg
+        >
+        <span>Share</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  id="share-modal"
+  hidden
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 fade-in"
+>
+  <div
+    class="relative w-full max-w-sm rounded-lg border border-border bg-popover p-6 shadow-xl mx-4"
+    role="dialog"
+    aria-label="Share note"
+  >
+    <button
+      id="share-modal-close"
+      class="absolute top-3 right-3 icon-btn"
+      aria-label="Close"
+    >
+      <span class="text-sm leading-none">✕</span>
+    </button>
+    <h3 class="text-sm font-semibold text-foreground mb-4">Share Note</h3>
+
+    <div id="share-qr-container" class="flex justify-center mb-4">
+      <canvas id="share-qr-canvas" width="160" height="160"></canvas>
+    </div>
+
+    <div class="flex items-center gap-2 mb-3">
+      <input
+        id="share-url-input"
+        type="text"
+        readonly
+        class="flex-1 px-2 py-1.5 text-xs bg-background border border-border rounded text-muted-foreground outline-none"
+      />
+      <button
+        id="share-copy-btn"
+        class="flex items-center gap-1 shrink-0 h-7 px-2 rounded text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer"
+        title="Copy URL"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
+            d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+          ></path></svg
+        >
+        <span>Copy</span>
+      </button>
+    </div>
+
+    <div
+      id="share-warning"
+      class="hidden p-2 rounded bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400"
+    >
+      <p>
+        This URL length is <span id="share-url-length">0</span> characters. The recommended
+        maximum is <span id="share-url-recommended">2000</span>. Some platforms
+        may truncate longer URLs. Consider shortening the content.
+      </p>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  #preview-container {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    display: block !important;
+  }
+
+  .preview-side .katex-display {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    box-sizing: border-box !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 8px !important;
+    margin: 1.5em 0 !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-text-muted, #52525b) transparent;
+    text-align: center !important;
+  }
+
+  .preview-side .katex-display > .katex {
+    display: inline-block !important;
+    margin: 0 auto !important;
+    max-width: none !important;
+    width: max-content !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+
+  .preview-side .katex {
+    max-width: 100% !important;
+  }
+
+  .preview-side .katex-display::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .preview-side .katex-display::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .preview-side .katex-display::-webkit-scrollbar-thumb {
+    background-color: var(--color-text-muted, #52525b);
+    border-radius: 4px;
+  }
+</style>
+
+<script>
+  import { Editor } from "../../utils/editor";
+  import { Preview } from "../../utils/preview";
+  import { getFile, saveFile } from "../../services/db";
+  import { generateQRToCanvas } from "../../utils/qr";
+  import { encodeContent } from "../../utils/codec";
+
+  let currentFileId: string | null = null;
+  let currentContent = "";
+  let editor: Editor | null = null;
+  let preview: Preview | null = null;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let isPreviewVisible = true;
+  const SPLIT_KEY = "note-editor-split";
+
+  let countMode: "char" | "token" = "char";
+
+  function updateCount(content: string) {
+    const el = document.getElementById("count-display");
+    if (!el) return;
+    const charCount = content.length;
+    if (countMode === "char") {
+      el.textContent = `Char: ${charCount}`;
+    } else {
+      const tokenCount = Math.ceil(charCount / 4);
+      el.textContent = `Token: ${tokenCount}`;
+    }
+  }
+
+  document.getElementById("btn-toggle-count")?.addEventListener("click", () => {
+    countMode = countMode === "char" ? "token" : "char";
+    updateCount(currentContent);
+  });
+
+  // ── Share Logic Pipeline ──
+  document.getElementById("btn-share")?.addEventListener("click", async () => {
+    const modal = document.getElementById("share-modal");
+    const urlInput = document.getElementById(
+      "share-url-input",
+    ) as HTMLInputElement;
+    const canvas = document.getElementById(
+      "share-qr-canvas",
+    ) as HTMLCanvasElement;
+    const qrContainer = document.getElementById("share-qr-container");
+    const warning = document.getElementById("share-warning");
+    const urlLen = document.getElementById("share-url-length");
+    const recommended = document.getElementById("share-url-recommended");
+
+    if (!modal || !urlInput || !canvas) return;
+
+    try {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const compressedToken = await encodeContent(currentContent);
+      const shareUrlObj = new URL(baseUrl);
+
+      shareUrlObj.pathname = shareUrlObj.pathname.replace(/\/?$/, "/share");
+      shareUrlObj.searchParams.set("content", compressedToken);
+
+      const shareUrl = shareUrlObj.toString();
+      urlInput.value = shareUrl;
+
+      const THRESHOLD = 2000;
+      const len = shareUrl.length;
+
+      if (urlLen) urlLen.textContent = String(len);
+      if (recommended) recommended.textContent = String(THRESHOLD);
+
+      if (len > THRESHOLD) {
+        warning?.classList.remove("hidden");
+        if (qrContainer) {
+          qrContainer.classList.add("hidden");
+        }
+        const warningText = warning?.querySelector("p");
+        if (warningText) {
+          warningText.innerHTML = `This URL length is <strong>${len}</strong> chars. The max length for a reliable QR Code and URL are <strong>${THRESHOLD}</strong>. QR code is disabled, and expect some platforms may truncate the content.`;
+        }
+      } else {
+        warning?.classList.add("hidden");
+        if (qrContainer) {
+          qrContainer.classList.remove("hidden");
+        }
+        await generateQRToCanvas(canvas, shareUrl, 160);
+      }
+      modal.hidden = false;
+    } catch (err) {
+      console.error("Sharing setup workflow caught error:", err);
+    }
+  });
+
+  document
+    .getElementById("share-modal-close")
+    ?.addEventListener("click", () => {
+      const modal = document.getElementById("share-modal");
+      if (modal) modal.hidden = true;
+    });
+
+  document.getElementById("share-modal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) {
+      const modal = document.getElementById("share-modal");
+      if (modal) modal.hidden = true;
+    }
+  });
+
+  document
+    .getElementById("share-copy-btn")
+    ?.addEventListener("click", async () => {
+      const input = document.getElementById(
+        "share-url-input",
+      ) as HTMLInputElement;
+      if (!input) return;
+      try {
+        await navigator.clipboard.writeText(input.value);
+        const btn = document.getElementById("share-copy-btn");
+        if (btn) {
+          const original = btn.innerHTML;
+          btn.innerHTML = "<span>Copied!</span>";
+          setTimeout(() => {
+            btn.innerHTML = original;
+          }, 2000);
+        }
+      } catch {
+        input.select();
+      }
+    });
+
+  // ── Layout functions ──
+  function updateLayoutWidths() {
+    const editorContainer = document.getElementById("editor-container");
+    const previewContainer = document.getElementById("preview-container");
+    const handle = document.getElementById("resize-handle");
+    const btn = document.getElementById("btn-toggle-preview");
+
+    if (!editorContainer || !previewContainer || !handle) return;
+
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      if (!isPreviewVisible) {
+        editorContainer.style.setProperty("width", "100%", "important");
+        editorContainer.style.setProperty("border-right", "none", "important");
+        editorContainer.style.removeProperty("visibility");
+        editorContainer.style.removeProperty("display");
+
+        previewContainer.style.setProperty("display", "none", "important");
+        previewContainer.style.setProperty("width", "0px", "important");
+        handle.style.setProperty("display", "none", "important");
+        if (btn) btn.style.opacity = "0.4";
+      } else {
+        editorContainer.style.setProperty("width", "0px", "important");
+        editorContainer.style.setProperty("border-right", "none", "important");
+        editorContainer.style.setProperty("visibility", "hidden", "important");
+
+        previewContainer.style.setProperty("display", "block", "important");
+        previewContainer.style.setProperty("width", "100%", "important");
+        handle.style.setProperty("display", "none", "important");
+        if (btn) btn.style.opacity = "1";
+      }
+    } else {
+      editorContainer.style.removeProperty("display");
+      editorContainer.style.removeProperty("visibility");
+      previewContainer.style.removeProperty("display");
+
+      if (!isPreviewVisible) {
+        editorContainer.style.setProperty("width", "100%", "important");
+        editorContainer.style.setProperty("border-right", "none", "important");
+        previewContainer.style.setProperty("display", "none", "important");
+        handle.style.setProperty("display", "none", "important");
+        if (btn) btn.style.opacity = "0.4";
+      } else {
+        const saved = localStorage.getItem(SPLIT_KEY);
+        const ratio = saved ? saved + "%" : "50%";
+
+        document.documentElement.style.setProperty("--editor-ratio", ratio);
+        editorContainer.style.width = ratio;
+        previewContainer.style.width = `calc(100% - ${ratio} - 4px)`;
+
+        editorContainer.style.removeProperty("border-right");
+        previewContainer.style.setProperty("display", "block", "important");
+        handle.style.display = "";
+        if (btn) btn.style.opacity = "1";
+      }
+    }
+
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 50);
+  }
+
+  function restoreSplitRatio() {
+    const saved = localStorage.getItem(SPLIT_KEY);
+    if (saved) {
+      document.documentElement.style.setProperty("--editor-ratio", saved + "%");
+    }
+    updateLayoutWidths();
+  }
+
+  function setupResize() {
+    const handle = document.getElementById("resize-handle");
+    const editorContainer = document.getElementById("editor-container");
+    const previewContainer = document.getElementById("preview-container");
+    const panel = document.getElementById("editor-panel");
+    if (!handle || !editorContainer || !previewContainer || !panel) return;
+
+    let isDragging = false;
+
+    handle.addEventListener("mousedown", (e) => {
+      if (!isPreviewVisible || window.innerWidth < 768) return;
+      isDragging = true;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isDragging || !isPreviewVisible || window.innerWidth < 768) return;
+      const rect = panel.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const pct = Math.max(20, Math.min(80, (x / rect.width) * 100));
+
+      const ratioStr = pct + "%";
+      document.documentElement.style.setProperty("--editor-ratio", ratioStr);
+      editorContainer.style.width = ratioStr;
+      previewContainer.style.width = `calc(100% - ${ratioStr} - 4px)`;
+      localStorage.setItem(SPLIT_KEY, String(Math.round(pct)));
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    });
+  }
+
+  document.addEventListener("file-selected", (async (e: Event) => {
+    const customEvent = e as CustomEvent;
+    const fileId = customEvent.detail.fileId;
+    if (fileId) await loadFile(fileId);
+  }) as EventListener);
+
+  document.addEventListener("file-created", (async (e: Event) => {
+    const customEvent = e as CustomEvent;
+    const fileId = customEvent.detail.fileId;
+    if (fileId) {
+      await loadFile(fileId);
+      setTimeout(() => {
+        editor?.focus();
+      }, 50);
+    }
+  }) as EventListener);
+
+  async function loadFile(fileId: string) {
+    const file = await getFile(fileId);
+    if (!file) return;
+    currentFileId = fileId;
+    currentContent = file.content;
+
+    const emptyMsg = document.querySelector(".unique-empty-msg");
+    if (emptyMsg) emptyMsg.remove();
+
+    editor?.setContent(file.content);
+    preview?.update(file.content);
+    updateCount(file.content);
+  }
+
+  function init() {
+    const editorContainer = document.getElementById("editor-container");
+    const previewContainer = document.getElementById("preview-container");
+    if (!editorContainer || !previewContainer) return;
+
+    preview = new Preview(previewContainer);
+    editor = new Editor(editorContainer, "");
+
+    if (window.innerWidth < 768) {
+      isPreviewVisible = false;
+    }
+
+    restoreSplitRatio();
+    setupResize();
+
+    const toggleBtn = document.getElementById("btn-toggle-preview");
+    toggleBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      isPreviewVisible = !isPreviewVisible;
+      updateLayoutWidths();
+
+      if (isPreviewVisible && preview && currentContent) {
+        preview.update(currentContent);
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      updateLayoutWidths();
+    });
+
+    editor.setOnChange((content) => {
+      currentContent = content;
+      updateCount(content);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        preview?.update(content);
+      }, 300);
+    });
+
+    editor.setOnSave(async (content) => {
+      if (!currentFileId) return;
+      const file = await getFile(currentFileId);
+      if (file) {
+        file.content = content;
+        await saveFile(file);
+      }
+    });
+
+    // ── Synchronized Scroll Pipeline ──
+
+    let isSyncingEditor = false;
+    let isSyncingPreview = false;
+
+    // CodeMirror wraps its scrollable area inside a '.cm-scroller' class element
+    // We must wait a tiny beat or fetch it dynamically since CodeMirror mounts asynchronously
+    setTimeout(() => {
+      const editorScroller = editorContainer.querySelector(".cm-scroller");
+
+      if (!editorScroller || !previewContainer) return;
+
+      // A. Handle Editor Scrolling -> Updates Preview
+      editorScroller.addEventListener(
+        "scroll",
+        () => {
+          if (isSyncingEditor) {
+            isSyncingEditor = false;
+            return;
+          }
+
+          isSyncingPreview = true;
+
+          // Calculate current percentage position of the editor
+          const maxEditorScroll =
+            editorScroller.scrollHeight - editorScroller.clientHeight;
+          if (maxEditorScroll <= 0) return;
+          const scrollPercentage = editorScroller.scrollTop / maxEditorScroll;
+
+          // Apply percentage directly to the preview element layout
+          const maxPreviewScroll =
+            previewContainer.scrollHeight - previewContainer.clientHeight;
+          previewContainer.scrollTop = scrollPercentage * maxPreviewScroll;
+        },
+        { passive: true },
+      );
+
+      // B. Handle Preview Scrolling -> Updates Editor
+      previewContainer.addEventListener(
+        "scroll",
+        () => {
+          if (isSyncingPreview) {
+            isSyncingPreview = false;
+            return;
+          }
+
+          isSyncingEditor = true;
+
+          // Calculate current percentage position of the preview
+          const maxPreviewScroll =
+            previewContainer.scrollHeight - previewContainer.clientHeight;
+          if (maxPreviewScroll <= 0) return;
+          const scrollPercentage =
+            previewContainer.scrollTop / maxPreviewScroll;
+
+          // Apply percentage directly back to the editor element scroller
+          const maxEditorScroll =
+            editorScroller.scrollHeight - editorScroller.clientHeight;
+          editorScroller.scrollTop = scrollPercentage * maxEditorScroll;
+        },
+        { passive: true },
+      );
+    }, 100); // 100ms structural padding ensures CM instance nodes are safely mounted in the DOM tree
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+</script>

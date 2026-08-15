@@ -1,0 +1,65 @@
+[
+  {
+    "slug": "stopwatch",
+    "title": "Stopwatch",
+    "description": "Stopwatch with lap timing, split tracking, and live title sync.",
+    "type": "page",
+    "icon": "Timer"
+  },
+  {
+    "slug": "paste-image",
+    "title": "Paste to Image",
+    "description": "Paste an image from your clipboard to preview and download it instantly.",
+    "type": "page",
+    "icon": "ClipboardPaste"
+  },
+  {
+    "slug": "qr-code",
+    "title": "QR Code Suite",
+    "description": "Generate QR codes from text or scan QR codes using your device camera.",
+    "type": "page",
+    "icon": "QrCode"
+  },
+  {
+    "slug": "latex-to-image",
+    "title": "LaTeX to Image",
+    "description": "Convert LaTeX equations to high-quality PNG or JPG files.",
+    "type": "page",
+    "icon": "Sigma"
+  },
+  {
+    "slug": "text-compare",
+    "title": "Text Compare",
+    "description": "Compare two text snippets side-by-side or unified with Git-style highlights.",
+    "type": "page",
+    "icon": "Columns"
+  },
+  {
+    "title": "Markdown Editor",
+    "description": "Edit/preview markdown with latex, mermaid, tabs, file-management, and more.",
+    "type": "external",
+    "icon": "FilePen",
+    "link": "https://note.rafifmsn.com"
+  },
+  {
+    "title": "Kanban",
+    "description": "Organize your workflow visually with columns and drag-and-drop cards.",
+    "type": "external",
+    "icon": "SquareKanban",
+    "link": "https://note.rafifmsn.com/kanban"
+  },
+  {
+    "title": "Task",
+    "description": "Easily add, edit, delete, and track your daily progress, preventing distractions.",
+    "type": "external",
+    "icon": "ListTodo",
+    "link": "https://note.rafifmsn.com/tasks"
+  },
+  {
+    "title": "Link Shortener",
+    "description": "Serverless and free link shortener leveraging Github as the database.",
+    "type": "external",
+    "icon": "Link",
+    "link": "https://s.rafifmsn.com"
+  }
+]

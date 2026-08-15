@@ -1,0 +1,10 @@
+services:
+  link:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PUBLIC_APP_URL: "${PUBLIC_APP_URL:-https://s.rafifmsn.com}"
+    ports:
+      - "${PORT:-8080}:80"
+    restart: unless-stopped

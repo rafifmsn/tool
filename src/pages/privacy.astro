@@ -1,0 +1,37 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { marked } from "marked";
+
+const content = `# Privacy Policy
+
+*Last updated: June 2026*
+
+## Data Collection
+
+rafifmsn/tool operates primarily in your browser. We use Umami Analytics, a privacy-focused analytics platform, to collect anonymous usage data (such as page views and feature usage) to help us improve the platform. This data is fully anonymized, contains no personally identifiable information, and does not track you across other websites.
+
+## Local Storage & Databases
+
+Some tools may use your browser's local storage or IndexedDB to persist your preferences, project states, or work-in-progress data. This application data is stored entirely on your device and never leaves your browser.
+
+## Third-Party Services
+
+This website is served as a static site. Outside of our anonymous analytics tracking, no invasive third-party tracking scripts or profiling data processors are used.
+
+## Changes
+
+We may update this policy occasionally. Any changes will be posted on this page.
+
+## Contact
+
+For inquiries regarding this Privacy Policy, submit a request through our [Contact Form](https://go.rafifmsn.com/contact-form).
+`;
+
+const html = marked(content);
+---
+
+<BaseLayout title="Privacy Policy - Rafif Muchsin" description="Privacy policy for Tool." topbarTitle="Privacy Policy">
+  <article class="max-w-2xl mx-auto px-4 py-8 lg:py-12 prose">
+    <Fragment set:html={html} />
+  </article>
+</BaseLayout>

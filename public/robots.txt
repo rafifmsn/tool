@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+
+Sitemap: https://tool.rafifmsn.com/sitemap-index.xml

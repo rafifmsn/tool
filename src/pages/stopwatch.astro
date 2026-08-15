@@ -1,0 +1,139 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import pages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+
+const page = pages.find((p) => p.slug === "stopwatch")!;
+---
+
+<BaseLayout title={`${page.title} - Rafif Muchsin`} description={page.description}>
+  <div class="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-6">
+    <div class="text-center max-w-xl mx-auto mb-4">
+      <h1 class="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
+        {page.title}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {page.description}
+      </p>
+    </div>
+
+    <div class="flex flex-col items-center justify-center gap-8 py-8">
+      <!-- Timer Display -->
+      <div class="text-center">
+        <span id="timer" class="text-4xl lg:text-4xl font-mono font-light tracking-widest text-foreground tabular-nums select-none">
+          00:00:00
+        </span>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-3">
+        <Button id="btn-toggle" class="min-w-22.5 font-semibold cursor-pointer" variant="default" size="sm"></Button>
+        <Button id="btn-split" variant="outline" size="sm" class="cursor-pointer">
+          Split
+        </Button>
+        <Button id="btn-clear" variant="outline" size="sm" class="cursor-pointer">
+          Clear
+        </Button>
+      </div>
+
+      <!-- Splits Table -->
+      <div id="splits-container" class="w-full max-w-md hidden">
+        <div class="border border-border rounded-lg overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-card text-muted-foreground text-xs uppercase tracking-wider">
+                <th class="text-left px-4 py-2.5 font-medium">Lap</th>
+                <th class="text-right px-4 py-2.5 font-medium">Split Time</th>
+                <th class="text-right px-4 py-2.5 font-medium">Total Time</th>
+              </tr>
+            </thead>
+            <tbody id="splits-body" class="divide-y divide-border"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { stopwatchStore } from "../utils/stopwatch/store";
+  import { formatTime, formatDiff } from "../utils/stopwatch/formatter";
+  import type { SplitRecord } from "../utils/stopwatch/types";
+
+  const timerEl = document.getElementById("timer")!;
+  const toggleBtn = document.getElementById("btn-toggle")!;
+  const splitBtn = document.getElementById("btn-split") as HTMLButtonElement;
+  const clearBtn = document.getElementById("btn-clear") as HTMLButtonElement;
+  const splitsContainer = document.getElementById("splits-container")!;
+  const splitsBody = document.getElementById("splits-body")!;
+
+  function setButtonDisabled(btn: HTMLButtonElement, disabled: boolean) {
+    btn.disabled = disabled;
+    if (disabled) {
+      btn.setAttribute("data-disabled", "");
+    } else {
+      btn.removeAttribute("data-disabled");
+    }
+  }
+
+  function updateUI() {
+    const state = stopwatchStore.getState();
+    const timeStr = formatTime(state.elapsed);
+
+    // Update timer display
+    timerEl.textContent = timeStr;
+
+    // Sync document title with the running timer
+    const baseTitle = document.title.split(" - ").slice(1).join(" - ");
+    document.title = state.running ? `${timeStr} - ${baseTitle}` : `Stopwatch - ${baseTitle}`;
+
+    // Toggle button
+    if (state.running) {
+      toggleBtn.textContent = "Pause";
+      toggleBtn.classList.remove("bg-foreground", "text-background", "hover:bg-foreground/90", "focus-visible:ring-outline/50");
+      toggleBtn.classList.add("bg-error", "text-error-foreground", "hover:bg-error/90", "focus-visible:ring-error/50");
+    } else {
+      toggleBtn.textContent = state.elapsed > 0 ? "Resume" : "Start";
+      toggleBtn.classList.remove("bg-error", "text-error-foreground", "hover:bg-error/90", "focus-visible:ring-error/50");
+      toggleBtn.classList.add("bg-foreground", "text-background", "hover:bg-foreground/90", "focus-visible:ring-outline/50");
+    }
+
+    // Split / Clear buttons
+    setButtonDisabled(splitBtn, !state.running);
+    setButtonDisabled(clearBtn, state.running && state.elapsed === 0 ? true : state.elapsed === 0);
+
+    // Splits table
+    if (state.splits.length > 0) {
+      splitsContainer.classList.remove("hidden");
+      renderSplits(state.splits);
+    } else {
+      splitsContainer.classList.add("hidden");
+      splitsBody.innerHTML = "";
+    }
+  }
+
+  function renderSplits(splits: SplitRecord[]) {
+    splitsBody.innerHTML = splits
+      .map(
+        (s) => `
+      <tr class="hover:bg-muted transition-colors">
+        <td class="px-4 py-2.5 text-muted-foreground font-medium">${s.lap}</td>
+        <td class="px-4 py-2.5 text-right font-mono tabular-nums text-muted-foreground">${formatDiff(s.splitTime)}</td>
+        <td class="px-4 py-2.5 text-right font-mono tabular-nums text-foreground">${formatTime(s.totalTime)}</td>
+      </tr>
+    `
+      )
+      .join("");
+  }
+
+  // Subscribe to store changes
+  stopwatchStore.subscribe(updateUI);
+
+  // Button handlers
+  toggleBtn.addEventListener("click", () => stopwatchStore.toggle());
+  splitBtn.addEventListener("click", () => stopwatchStore.split());
+  clearBtn.addEventListener("click", () => stopwatchStore.reset());
+
+  // Initial render
+  updateUI();
+</script>

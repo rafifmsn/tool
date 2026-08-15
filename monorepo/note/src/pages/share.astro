@@ -1,0 +1,157 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Shared Note"
+  description="View and import a shared markdown note."
+>
+  <body class="h-full w-full overflow-hidden bg-background">
+    <div id="app-root" class="flex flex-col h-full w-full">
+      <!-- Topbar (minimal, like kanban) -->
+      <div
+        class="flex items-center justify-between h-12 px-4 border-b border-border bg-card"
+      >
+        <div class="flex items-center gap-2">
+          <a
+            href="/"
+            class="text-sm font-semibold text-foreground no-underline font-secondary tracking-tight"
+            >Note</a
+          >
+          <span class="text-muted-foreground text-xs">/</span>
+          <span class="text-sm text-muted-foreground">Shared Note</span>
+        </div>
+        <button
+          id="btn-add-to-editor"
+          class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors cursor-pointer"
+          title="Add this content to your editor"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle
+              cx="9"
+              cy="7"
+              r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line
+              x1="22"
+              y1="11"
+              x2="16"
+              y2="11"></line></svg
+          >
+          <span>Add to Editor</span>
+        </button>
+      </div>
+
+      <!-- Simple editor area -->
+      <div id="share-editor-container" class="flex-1 overflow-hidden">
+        <div
+          class="flex items-center justify-center h-full text-muted-foreground text-sm"
+        >
+          <p>Loading shared content...</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</BaseLayout>
+
+<script>
+  import { Editor } from "../utils/editor";
+  import { decodeContent } from "../utils/codec";
+  import { saveFile, generateId, initDefaultTabs } from "../services/db";
+
+  let editor: Editor | null = null;
+  let sharedContent = "";
+
+  async function init() {
+    // Parse content from URL
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("content");
+
+    if (!encoded) {
+      const container = document.getElementById("share-editor-container");
+      if (container) {
+        container.innerHTML =
+          '<div class="flex items-center justify-center h-full text-muted-foreground text-sm"><p>No shared content found.</p></div>';
+      }
+      return;
+    }
+
+    try {
+      sharedContent = await decodeContent(encoded);
+    } catch (err) {
+      console.error("Failed to decode shared content:", err);
+      const container = document.getElementById("share-editor-container");
+      if (container) {
+        container.innerHTML =
+          '<div class="flex items-center justify-center h-full text-muted-foreground text-sm"><p>Failed to load shared content. The link may be corrupted.</p></div>';
+      }
+      return;
+    }
+
+    const container = document.getElementById("share-editor-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    editor = new Editor(container, sharedContent);
+    editor.focus();
+  }
+
+  document
+    .getElementById("btn-add-to-editor")
+    ?.addEventListener("click", async () => {
+      const contentToImport = editor ? editor.getContent() : sharedContent;
+      if (!contentToImport) return;
+
+      const tabs = await initDefaultTabs();
+      const firstTabId = tabs[0]?.id || "";
+      const name = `shared-note-${Date.now()}.md`;
+      const id = generateId();
+
+      await saveFile({
+        id,
+        name,
+        content: contentToImport,
+        type: "markdown",
+        tabId: firstTabId,
+        updatedAt: Date.now(),
+      });
+      const btn = document.getElementById("btn-add-to-editor");
+      if (btn) {
+        btn.innerHTML = "<span>Importing...</span>";
+      }
+      window.location.href = `/?fileId=${id}`;
+    });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+</script>
+
+<style>
+  :root {
+    height: 100%;
+  }
+  body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  #share-editor-container {
+    height: 100%;
+  }
+  #share-editor-container .cm-editor {
+    height: 100%;
+  }
+  #share-editor-container .cm-scroller {
+    overflow: auto;
+  }
+</style>

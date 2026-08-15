@@ -1,0 +1,420 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import pages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+
+const page = pages.find((p) => p.slug === "qr-code")!;
+---
+
+<BaseLayout title={`${page.title} - Rafif Muchsin`} description={page.description}>
+  <div class="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-6">
+    <div class="text-center max-w-xl mx-auto mb-4">
+      <h1 class="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
+        {page.title}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {page.description}
+      </p>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="flex border-b border-border w-fit mx-auto gap-2 p-1 bg-muted rounded-xl mb-4">
+      <Button
+        id="tab-generate"
+        variant="default"
+        size="sm"
+        class="px-6 font-semibold shadow-xs"
+      >
+        QR Generator
+      </Button>
+      <Button
+        id="tab-scan"
+        variant="ghost"
+        size="sm"
+        class="px-6 font-semibold text-muted-foreground hover:text-foreground"
+      >
+        QR Scanner
+      </Button>
+    </div>
+
+    <!-- Part A: QR Code Generator Workspace -->
+    <div id="workspace-generate" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
+        <h3 class="text-sm font-semibold text-foreground">Text or URL Input</h3>
+        <textarea
+          id="qr-input"
+          placeholder="Type or paste your link or text here..."
+          class="h-full min-h-44 p-4 text-sm bg-accent border border-border rounded-xl focus:outline-none focus:border-outline resize-none text-foreground"
+        ></textarea>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div class="border border-border rounded-xl bg-card p-6 flex flex-col items-center justify-center gap-4 text-center">
+          <h3 class="text-sm font-semibold text-foreground w-full text-left">Generated QR</h3>
+          <div class="w-full max-w-50 aspect-square bg-white rounded-lg flex items-center justify-center p-3 border border-outline relative overflow-hidden" id="qr-container">
+            <canvas id="qr-canvas" class="w-full h-full max-w-full max-h-full"></canvas>
+            <div id="qr-placeholder" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted-foreground select-none">
+              Enter text to generate
+            </div>
+          </div>
+          <Button
+            id="btn-download-qr"
+            variant="default"
+            size="sm"
+            class="w-full font-semibold"
+            disabled
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download QR Code
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Part B: QR Code Scanner Workspace -->
+    <div id="workspace-scan" class="hidden flex-col gap-6 [&:not(.hidden)]:flex">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Live Scanner View -->
+        <div class="md:col-span-2 border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Camera Scanner</h3>
+
+          <div class="relative border border-border rounded-xl bg-accent overflow-hidden flex items-center justify-center aspect-video max-h-100">
+            <!-- Video feed -->
+            <video id="scanner-video" class="w-full h-full object-cover hidden" playsinline></video>
+            <!-- Canvas helper for frame capture -->
+            <canvas id="scanner-canvas" class="hidden"></canvas>
+
+            <!-- Start Scanner Button / Prompt -->
+            <div id="scanner-prompt" class="flex flex-col items-center gap-3 p-8 text-center select-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0Z"/><path d="m15 10-5 5-2-2"/></svg>
+              <span class="text-sm font-semibold text-foreground">Request Camera Permission</span>
+              <span class="hidden md:block text-xs text-muted-foreground max-w-xs leading-relaxed">
+                Click start to activate your camera and point it at a QR code to decode its contents.
+              </span>
+              <Button
+                id="btn-start-scanner"
+                variant="default"
+                size="sm"
+                class="mt-2 font-semibold px-6"
+              >
+                Start Scanner
+              </Button>
+            </div>
+
+            <!-- Error Notice (Accidental blocks) -->
+            <div id="scanner-error" class="hidden flex-col items-center gap-3 p-8 text-center [&:not(.hidden)]:flex">
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+              <span class="text-sm font-semibold text-error">Camera Access Blocked</span>
+              <span class="text-xs text-muted-foreground max-w-sm leading-relaxed">
+                Please allow camera permissions in your browser's site settings and refresh the page.
+              </span>
+              <Button
+                id="btn-retry-scanner"
+                variant="error"
+                size="sm"
+                class="mt-2 font-semibold px-6"
+              >
+                Retry
+              </Button>
+            </div>
+
+            <!-- Scanner Status Info -->
+            <div id="scanner-loading" class="hidden absolute inset-0 bg-muted/80 items-center justify-center text-xs text-muted-foreground select-none [&:not(.hidden)]:flex">
+              Initializing camera...
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex justify-end">
+            <Button
+              id="btn-stop-scanner"
+              variant="outline"
+              size="sm"
+              class="hidden font-semibold"
+            >
+              Stop Camera
+            </Button>
+          </div>
+        </div>
+
+        <!-- Scan Result (Right column) -->
+        <div class="flex flex-col gap-4">
+          <div id="result-card" class="border border-border rounded-xl bg-card p-5 flex flex-col gap-4 min-h-30">
+            <h3 class="text-sm font-semibold text-foreground">Scan Result</h3>
+            <div id="scan-result-empty" class="text-xs text-muted-foreground py-6 text-center">
+              No QR code detected yet
+            </div>
+            <div id="scan-result-content" class="hidden flex-col gap-3 [&:not(.hidden)]:flex">
+              <div class="bg-accent border border-border p-3.5 rounded-lg text-xs font-mono break-all text-foreground max-h-37.5 overflow-y-auto" id="result-text"></div>
+
+              <div class="flex gap-2">
+                <Button
+                  id="btn-copy-result"
+                  variant="outline"
+                  size="sm"
+                  class="flex-1 font-semibold"
+                >
+                  Copy Text
+                </Button>
+                <Button
+                  id="link-open-result"
+                  as="a"
+                  href=""
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="default"
+                  size="sm"
+                  class="flex-1 font-semibold no-underline text-center"
+                >
+                  Open Link
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Notice Box for Permissions -->
+      <div class="border border-border rounded-xl bg-card p-6">
+        <h3 class="text-sm font-semibold text-foreground mb-3">Camera Permission Troubleshooting</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-muted-foreground leading-relaxed">
+          <div class="flex flex-col gap-3">
+            <div>
+              <strong class="text-foreground block font-medium mb-1">Google Chrome / Brave / Edge (Desktop)</strong>
+              Click the <strong class="text-foreground">Lock Icon 🔒</strong> to the left of the website URL address bar. Locate the "Camera" switch and set it to <strong class="text-foreground">Allow</strong>, then refresh the page.
+            </div>
+            <div>
+              <strong class="text-foreground block font-medium mb-1">Mozilla Firefox (Desktop)</strong>
+              Click the camera icon inside the URL address bar, click the **X** to remove "Blocked Temporarily", then refresh the page and allow camera access when prompted.
+            </div>
+          </div>
+          <div class="flex flex-col gap-3">
+            <div>
+              <strong class="text-foreground block font-medium mb-1">Apple Safari (macOS / iOS)</strong>
+              Navigate to your phone's general settings: <strong class="text-foreground">Settings > Safari > Camera</strong> and toggle it to <strong class="text-foreground">Allow</strong>.
+            </div>
+            <div>
+              <strong class="text-foreground block font-medium mb-1">Mobile Permissions Check</strong>
+              If you allowed access in the browser but it still fails, go to your phone's OS settings under <strong class="text-foreground">Settings > Apps > [Your Browser Name] > Permissions</strong> and toggle camera access permissions ON.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { loadQRCodeGenerator, loadJSQR } from "../utils/qr/loader";
+  import { setButtonDisabled } from "../utils/dom";
+
+  // Navigation
+  const tabGenerate = document.getElementById("tab-generate")!;
+  const tabScan = document.getElementById("tab-scan")!;
+  const workspaceGenerate = document.getElementById("workspace-generate")!;
+  const workspaceScan = document.getElementById("workspace-scan")!;
+
+  // Generator Elements
+  const qrInput = document.getElementById("qr-input") as HTMLTextAreaElement;
+  const qrCanvas = document.getElementById("qr-canvas") as HTMLCanvasElement;
+  const qrPlaceholder = document.getElementById("qr-placeholder")!;
+  const btnDownloadQr = document.getElementById("btn-download-qr")!;
+
+  // Scanner Elements
+  const btnStartScanner = document.getElementById("btn-start-scanner")!;
+  const btnStopScanner = document.getElementById("btn-stop-scanner")!;
+  const btnRetryScanner = document.getElementById("btn-retry-scanner")!;
+  const scannerVideo = document.getElementById("scanner-video") as HTMLVideoElement;
+  const scannerCanvas = document.getElementById("scanner-canvas") as HTMLCanvasElement;
+  const scannerPrompt = document.getElementById("scanner-prompt")!;
+  const scannerError = document.getElementById("scanner-error")!;
+  const scannerLoading = document.getElementById("scanner-loading")!;
+  const scanResultEmpty = document.getElementById("scan-result-empty")!;
+  const scanResultContent = document.getElementById("scan-result-content")!;
+  const resultText = document.getElementById("result-text")!;
+  const btnCopyResult = document.getElementById("btn-copy-result")!;
+  const linkOpenResult = document.getElementById("link-open-result") as HTMLAnchorElement;
+
+  // Active Scanner Streams
+  let stream: MediaStream | null = null;
+  let animFrameId: number | null = null;
+  let activeTab: "generate" | "scan" = "generate";
+
+  // Tab switching
+  tabGenerate.addEventListener("click", () => {
+    if (activeTab === "generate") return;
+    activeTab = "generate";
+    stopScanner();
+
+    // Toggle Tab style
+    tabGenerate.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
+    tabScan.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
+
+    workspaceGenerate.classList.remove("hidden");
+    workspaceScan.classList.add("hidden");
+  });
+
+  tabScan.addEventListener("click", () => {
+    if (activeTab === "scan") return;
+    activeTab = "scan";
+
+    // Toggle Tab style
+    tabScan.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
+    tabGenerate.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
+
+    workspaceGenerate.classList.add("hidden");
+    workspaceScan.classList.remove("hidden");
+  });
+
+  // ==================== GENERATOR LOGIC ====================
+  let qrcodeLib: any = null;
+
+  async function generateQR() {
+    const value = qrInput.value.trim();
+    if (!value) {
+      qrPlaceholder.classList.remove("hidden");
+      setButtonDisabled(btnDownloadQr, true);
+      return;
+    }
+
+    if (!qrcodeLib) {
+      try {
+        qrcodeLib = await loadQRCodeGenerator();
+      } catch (err) {
+        console.error("Failed to load QR generator library:", err);
+        return;
+      }
+    }
+
+    qrPlaceholder.classList.add("hidden");
+    setButtonDisabled(btnDownloadQr, false);
+
+    // Render code on canvas
+    qrcodeLib.toCanvas(qrCanvas, value, {
+      width: 256,
+      margin: 1.5,
+      color: {
+        dark: "#000000",
+        light: "#ffffff"
+      }
+    }, (err: any) => {
+      if (err) console.error("Error rendering QR canvas:", err);
+    });
+  }
+
+  // Bind input keyups
+  qrInput.addEventListener("input", generateQR);
+
+  // Download QR code
+  btnDownloadQr.addEventListener("click", () => {
+    const dataUrl = qrCanvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = "qrcode.png";
+    link.href = dataUrl;
+    link.click();
+  });
+
+  // ==================== SCANNER LOGIC ====================
+  let jsQRDec: any = null;
+
+  async function startScanner() {
+    scannerPrompt.classList.add("hidden");
+    scannerError.classList.add("hidden");
+    scannerLoading.classList.remove("hidden");
+    scanResultContent.classList.add("hidden");
+    scanResultEmpty.classList.remove("hidden");
+
+    try {
+      // Lazy load jsQR
+      if (!jsQRDec) {
+        jsQRDec = await loadJSQR();
+      }
+
+      // Request permissions
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
+
+      scannerLoading.classList.add("hidden");
+      scannerVideo.classList.remove("hidden");
+      btnStopScanner.classList.remove("hidden");
+
+      scannerVideo.srcObject = stream;
+      scannerVideo.setAttribute("playsinline", "true");
+      scannerVideo.play();
+      animFrameId = requestAnimationFrame(scanTick);
+    } catch (err) {
+      console.error("Camera access failed:", err);
+      scannerLoading.classList.add("hidden");
+      scannerVideo.classList.add("hidden");
+      btnStopScanner.classList.add("hidden");
+      scannerError.classList.remove("hidden");
+    }
+  }
+
+  function scanTick() {
+    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
+      const ctx = scannerCanvas.getContext("2d")!;
+      scannerCanvas.width = scannerVideo.videoWidth;
+      scannerCanvas.height = scannerVideo.videoHeight;
+      ctx.drawImage(scannerVideo, 0, 0, scannerCanvas.width, scannerCanvas.height);
+
+      const imgData = ctx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
+      const code = jsQRDec(imgData.data, imgData.width, imgData.height, {
+        inversionAttempts: "dontInvert",
+      });
+
+      if (code && code.data) {
+        handleScanResult(code.data);
+        stopScanner();
+        return;
+      }
+    }
+    animFrameId = requestAnimationFrame(scanTick);
+  }
+
+  function handleScanResult(text: string) {
+    resultText.textContent = text;
+    scanResultEmpty.classList.add("hidden");
+    scanResultContent.classList.remove("hidden");
+
+    // Enable link opening if valid URL
+    const isUrl = /^https?:\/\//i.test(text.trim());
+    if (isUrl) {
+      linkOpenResult.href = text.trim();
+      linkOpenResult.classList.remove("hidden");
+    } else {
+      linkOpenResult.classList.add("hidden");
+    }
+  }
+
+  function stopScanner() {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+    }
+    if (animFrameId) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+
+    scannerVideo.classList.add("hidden");
+    btnStopScanner.classList.add("hidden");
+    scannerPrompt.classList.remove("hidden");
+  }
+
+  // Copy result text
+  btnCopyResult.addEventListener("click", () => {
+    navigator.clipboard.writeText(resultText.textContent || "").then(() => {
+      const originalText = btnCopyResult.textContent;
+      btnCopyResult.textContent = "Copied!";
+      setTimeout(() => {
+        btnCopyResult.textContent = originalText;
+      }, 1500);
+    });
+  });
+
+  btnStartScanner.addEventListener("click", startScanner);
+  btnStopScanner.addEventListener("click", stopScanner);
+  btnRetryScanner.addEventListener("click", startScanner);
+</script>

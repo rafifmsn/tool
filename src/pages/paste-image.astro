@@ -1,0 +1,296 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import pages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+import { Input } from "@/components/starwind/input";
+
+const page = pages.find((p) => p.slug === "paste-image")!;
+---
+
+<BaseLayout title={`${page.title} - Rafif Muchsin`} description={page.description}>
+  <div class="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-6">
+    <div class="text-center max-w-xl mx-auto mb-4">
+      <h1 class="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
+        {page.title}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {page.description}
+      </p>
+    </div>
+
+    <!-- Main Workspace -->
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- Container A: Dropzone (Spans 3 cols initially for symmetry) -->
+      <div id="dropzone-wrapper" class="md:col-span-3">
+        <div
+          id="dropzone"
+          class="flex flex-col items-center justify-center min-h-87.5 border-2 border-dashed border-border rounded-xl bg-card hover:bg-muted hover:border-outline transition-all cursor-pointer p-8 relative"
+        >
+          <input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" />
+          <div class="text-center flex flex-col items-center gap-3 select-none pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12v-1h6v1"/><path d="M9 16v-1h6v1"/></svg>
+            <span class="text-sm font-semibold text-foreground">Paste, Drag, or Click to Upload</span>
+            <span class="text-xs text-muted-foreground">Press Ctrl+V from anywhere, drag an image here, or browse</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container B: Preview Card (Spans 2 cols, hidden initially) -->
+      <div id="preview-wrapper" class="md:col-span-2 hidden">
+        <div class="border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Image Preview</h3>
+          <div class="border border-border rounded-lg overflow-hidden bg-accent flex items-center justify-center p-4 min-h-50">
+            <img id="preview-image" src="" alt="Pasted clipboard" class="max-h-112.5 object-contain max-w-full" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Container C: Metadata & Actions (Spans 1 col, hidden initially) -->
+      <div id="settings-wrapper" class="md:col-span-1 hidden flex-col gap-4 [&:not(.hidden)]:flex">
+        <!-- Metadata -->
+        <div id="metadata-card" class="border border-border rounded-xl bg-card p-5 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Metadata</h3>
+          <div class="flex flex-col gap-2.5 text-xs">
+            <div class="flex justify-between py-1.5 border-b border-border">
+              <span class="text-muted-foreground">Dimensions</span>
+              <span id="meta-dimensions" class="font-medium text-foreground font-mono">-</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-border">
+              <span class="text-muted-foreground">File Size</span>
+              <span id="meta-size" class="font-medium text-foreground font-mono">-</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-border">
+              <span class="text-muted-foreground">MIME Type</span>
+              <span id="meta-mime" class="font-medium text-foreground font-mono">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Settings & Actions -->
+        <div id="actions-card" class="border border-border rounded-xl bg-card p-5 flex flex-col gap-4">
+          <h3 class="text-sm font-semibold text-foreground">Download Settings</h3>
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label for="filename-input" class="text-xs text-muted-foreground">Filename</label>
+              <Input
+                id="filename-input"
+                value="pasted-image"
+                size="sm"
+                class="font-mono text-xs"
+              />
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2">
+              <Button
+                id="btn-download-png"
+                variant="default"
+                size="sm"
+                class="w-full font-semibold"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Download PNG
+              </Button>
+              <Button
+                id="btn-download-jpg"
+                variant="outline"
+                size="sm"
+                class="w-full font-semibold"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Download JPG
+              </Button>
+
+              <Button
+                id="btn-reset"
+                variant="error"
+                size="sm"
+                class="w-full font-semibold mt-2"
+              >
+                Reset Image
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const dropzone = document.getElementById("dropzone")!;
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  const dropzoneWrapper = document.getElementById("dropzone-wrapper")!;
+
+  const previewWrapper = document.getElementById("preview-wrapper")!;
+  const previewImage = document.getElementById("preview-image") as HTMLImageElement;
+
+  const settingsWrapper = document.getElementById("settings-wrapper")!;
+  const metaDimensions = document.getElementById("meta-dimensions")!;
+  const metaSize = document.getElementById("meta-size")!;
+  const metaMime = document.getElementById("meta-mime")!;
+
+  const filenameInput = document.getElementById("filename-input") as HTMLInputElement;
+  const btnDownloadPng = document.getElementById("btn-download-png")!;
+  const btnDownloadJpg = document.getElementById("btn-download-jpg")!;
+  const btnReset = document.getElementById("btn-reset")!;
+
+  let currentBlob: Blob | null = null;
+  let currentFileExtension: string = "png";
+
+  // Drag and Drop listeners
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("border-outline", "bg-muted");
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("border-outline", "bg-muted");
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("border-outline", "bg-muted");
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleImageFile(files[0]);
+    }
+  });
+
+  // Click file upload listener
+  fileInput.addEventListener("change", () => {
+    const files = fileInput.files;
+    if (files && files.length > 0) {
+      handleImageFile(files[0]);
+    }
+  });
+
+  // Clipboard paste listener
+  document.addEventListener("paste", (e) => {
+    // Only capture pastes if dropzone is currently visible (prevent hijacking pastes on settings view)
+    if (dropzoneWrapper.classList.contains("hidden")) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleImageFile(file);
+          break;
+        }
+      }
+    }
+  });
+
+  // Reset tool state
+  btnReset.addEventListener("click", () => {
+    currentBlob = null;
+    previewImage.src = "";
+    fileInput.value = "";
+    filenameInput.value = "pasted-image";
+    metaDimensions.textContent = "-";
+    metaSize.textContent = "-";
+    metaMime.textContent = "-";
+
+    dropzoneWrapper.classList.remove("hidden");
+    previewWrapper.classList.add("hidden");
+    settingsWrapper.classList.add("hidden");
+  });
+
+  // Handle uploaded or pasted file
+  function handleImageFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      alert("Invalid file type. Please select or paste an image.");
+      return;
+    }
+
+    currentBlob = file;
+
+    // Parse name and extension
+    const extMatch = file.name.match(/\.([^.]+)$/);
+    currentFileExtension = extMatch ? extMatch[1] : "png";
+    const baseName = file.name.substring(0, file.name.length - (extMatch ? extMatch[0].length : 0));
+    if (baseName && baseName !== "image") {
+      filenameInput.value = baseName;
+    } else {
+      filenameInput.value = "pasted-image";
+    }
+
+    // Set MIME
+    metaMime.textContent = file.type;
+
+    // Set Size
+    metaSize.textContent = formatBytes(file.size);
+
+    // Read image for preview and dimensions
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      previewImage.src = src;
+
+      const img = new Image();
+      img.onload = () => {
+        metaDimensions.textContent = `${img.width} × ${img.height} px`;
+
+        // Toggle view containers
+        dropzoneWrapper.classList.add("hidden");
+        previewWrapper.classList.remove("hidden");
+        settingsWrapper.classList.remove("hidden");
+
+        // Scroll to preview
+        previewWrapper.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Format bytes helper
+  function formatBytes(bytes: number, decimals = 2) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  }
+
+  // Download Trigger
+  function triggerDownload(format: "png" | "jpg") {
+    if (!currentBlob) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+
+      if (format === "jpg") {
+        // Draw solid white background for JPG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      ctx.drawImage(img, 0, 0);
+
+      // Trigger download
+      const mime = format === "png" ? "image/png" : "image/jpeg";
+      const quality = format === "png" ? undefined : 0.95;
+      const dataUrl = canvas.toDataURL(mime, quality);
+
+      const link = document.createElement("a");
+      const name = filenameInput.value.trim() || "image";
+      link.download = `${name}.${format}`;
+      link.href = dataUrl;
+      link.click();
+    };
+    img.src = previewImage.src;
+  }
+
+  btnDownloadPng.addEventListener("click", () => triggerDownload("png"));
+  btnDownloadJpg.addEventListener("click", () => triggerDownload("jpg"));
+</script>

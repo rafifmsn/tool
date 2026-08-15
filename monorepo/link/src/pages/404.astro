@@ -1,0 +1,309 @@
+---
+import Layout from "../layout/Layout.astro";
+import { LoaderCircle, ArrowRight } from "@lucide/astro";
+import { Button } from "@/components/starwind/button";
+---
+
+<Layout title="Resolving...">
+    <div
+        id="loading-state"
+        class="flex-1 flex flex-col items-center justify-center p-4 space-y-6"
+    >
+        <div class="text-white">
+            <LoaderCircle class="w-12 h-12 animate-spin" />
+        </div>
+        <p class="text-neutral-400 italic">Locating link...</p>
+    </div>
+
+    <div
+        id="error-state"
+        class="hidden mt-[calc(50vh-112px)] flex-1 flex-col items-center justify-center text-center space-y-6 p-4"
+    >
+        <h1 class="text-6xl font-medium text-white">404</h1>
+        <p class="text-xl text-neutral-400">Page not found.</p>
+        <a
+            href="/"
+            class="text-white underline decoration-2 underline-offset-8 hover:opacity-80 transition-opacity"
+        >
+            Go back home
+        </a>
+    </div>
+
+    <div
+        id="redirect-state"
+        class="hidden flex-1 flex-col items-center justify-center text-center space-y-8 p-4 max-w-lg mx-auto"
+    >
+        <div class="space-y-2 w-full">
+            <p
+                id="preview-label"
+                class="text-neutral-500 text-xs uppercase tracking-widest font-medium"
+            >
+                Preview Target
+            </p>
+            <div
+                class="p-4 bg-surface border border-border rounded-lg break-all"
+            >
+                <h2
+                    id="target-preview"
+                    class="text-sm text-neutral-300 line-clamp-2"
+                >
+                    ...
+                </h2>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-col items-center space-y-4"
+            id="countdown-container"
+        >
+            <div
+                class="w-20 h-20 rounded-full border-2 border-white/20 flex items-center justify-center relative"
+            >
+                <span id="countdown" class="text-3xl font-medium">5</span>
+                <svg
+                    class="absolute inset-0 w-full h-full -rotate-90 translate-x-[1.5px] translate-y-0.5"
+                >
+                    <circle
+                        cx="40"
+                        cy="40"
+                        r="36"
+                        fill="none"
+                        stroke="white"
+                        stroke-width="2"
+                        stroke-dasharray="226"
+                        id="progress-ring"></circle>
+                </svg>
+            </div>
+            <p id="redirect-subtext" class="text-neutral-400 text-sm">
+                Redirecting automatically...
+            </p>
+        </div>
+
+        <Button
+            id="manual-btn"
+            variant="default"
+            size="md"
+            class="px-8 rounded-full font-semibold"
+        >
+            <span id="btn-text">Proceed Now</span>
+            <ArrowRight class="w-4 h-4" />
+        </Button>
+    </div>
+</Layout>
+
+<script>
+    interface Config {
+        prefix: string;
+        user: string;
+        repo: string;
+        default?: boolean;
+    }
+
+    const B32_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    const ui = {
+        loading: document.getElementById("loading-state") as HTMLDivElement,
+        error: document.getElementById("error-state") as HTMLDivElement,
+        redirect: document.getElementById("redirect-state") as HTMLDivElement,
+        preview: document.getElementById("target-preview") as HTMLElement,
+        label: document.getElementById("preview-label") as HTMLElement,
+        subtext: document.getElementById("redirect-subtext") as HTMLElement,
+        count: document.getElementById("countdown") as HTMLElement,
+        btn: document.getElementById("manual-btn") as HTMLButtonElement,
+        btnText: document.getElementById("btn-text") as HTMLElement,
+        ring: document.getElementById(
+            "progress-ring",
+        ) as unknown as SVGCircleElement,
+    };
+
+    // --- SECURITY FILTERING UTILITIES ---
+    function sanitizeGitHubIdentifier(str: string): string {
+        return str.trim().replace(/[^a-zA-Z0-9-_]/g, "");
+    }
+
+    function safeValidateUrl(url: string | null | undefined): string | null {
+        if (!url) return null;
+        try {
+            const parsed = new URL(url.trim());
+            // Strict enforcement of secure hypermedia web components
+            if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+                return null;
+            }
+            return parsed.href;
+        } catch {
+            return null;
+        }
+    }
+
+    function getUlidAndPrefix() {
+        const path = window.location.pathname.replace(/\/$/, "");
+        const segs = path.split("/").filter(Boolean);
+        if (segs.length === 0) return { id: null, prefix: null };
+        if (segs.length >= 2 && segs[segs.length - 1].length === 10) {
+            return { id: segs[segs.length - 1], prefix: segs[segs.length - 2] };
+        }
+        const last = segs[segs.length - 1];
+        if (last.length === 10) return { id: last, prefix: null };
+        return { id: null, prefix: null };
+    }
+
+    function getParamsFromHash() {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const u = params.get("u");
+        const r = params.get("r");
+
+        if (u && r) {
+            return {
+                user: sanitizeGitHubIdentifier(u),
+                repo: sanitizeGitHubIdentifier(r),
+            };
+        }
+        return null;
+    }
+
+    function getPath(id: string, user: string, repo: string) {
+        let time = 0;
+        for (let i = 0; i < 10; i++) {
+            const val = B32_CHARS.indexOf(id[i].toUpperCase());
+            if (val === -1) return null;
+            time = time * 32 + val;
+        }
+        const d = new Date(time);
+        const filePath = `data/${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${id}.json`;
+
+        // Use proper asset variable encoding
+        const u = encodeURIComponent(user);
+        const r = encodeURIComponent(repo);
+
+        return {
+            primary: `https://cdn.jsdelivr.net/gh/${u}/${r}@main/${filePath}`,
+            fallback: `https://raw.githubusercontent.com/${u}/${r}/main/${filePath}`,
+        };
+    }
+
+    function showState(state: "loading" | "error" | "redirect") {
+        ui.loading.classList.toggle("hidden", state !== "loading");
+        ui.error.classList.toggle("hidden", state !== "error");
+        ui.redirect.classList.toggle("hidden", state !== "redirect");
+        if (state === "redirect") {
+            ui.redirect.classList.add("flex");
+            ui.redirect.classList.remove("hidden");
+        }
+    }
+
+    function startCounter(targetUrl: string, seconds: number) {
+        const verifiedUrl = safeValidateUrl(targetUrl);
+        if (!verifiedUrl) {
+            return fallbackToHome("Insecure Target Protocol Blocked");
+        }
+
+        let count = seconds;
+        ui.count.textContent = count.toString();
+        ui.btn.onclick = () => window.location.replace(verifiedUrl);
+        if (ui.ring) ui.ring.style.strokeDashoffset = "0";
+
+        const interval = setInterval(() => {
+            count--;
+            if (ui.count) ui.count.textContent = count.toString();
+            const progress = (seconds - count) / seconds;
+            if (ui.ring)
+                ui.ring.style.strokeDashoffset = String(226 * (1 - progress));
+            if (count <= 0) {
+                clearInterval(interval);
+                window.location.replace(verifiedUrl);
+            }
+        }, 1000);
+    }
+
+    function fallbackToHome(msg: string) {
+        showState("redirect");
+        ui.label.textContent = msg;
+        ui.preview.textContent = window.location.origin;
+        ui.subtext.textContent = "Redirecting you to home page...";
+        ui.btnText.textContent = "Go Home Now";
+        startCounter(window.location.origin, 5);
+    }
+
+    async function fetchTarget(id: string, user: string, repo: string) {
+        try {
+            const paths = getPath(id, user, repo);
+            if (!paths) throw new Error();
+
+            let pathData: any = null;
+
+            // Try jsDelivr CDN first
+            try {
+                const resPrimary = await fetch(
+                    paths.primary + `?t=${Date.now()}`,
+                );
+                if (resPrimary.ok) {
+                    pathData = await resPrimary.json();
+                }
+            } catch {
+                /* Fallback to raw */
+            }
+
+            // Fall back to GitHub raw content if CDN fails
+            if (!pathData) {
+                const resFallback = await fetch(
+                    paths.fallback + `?t=${Date.now()}`,
+                );
+                if (!resFallback.ok) throw new Error();
+                pathData = await resFallback.json();
+            }
+
+            // Severe URL structure check from data execution object
+            const structuralTarget = safeValidateUrl(pathData?.target);
+            if (!structuralTarget) {
+                throw new Error("Malicious string configuration rejected.");
+            }
+
+            showState("redirect");
+            ui.preview.textContent = structuralTarget;
+            startCounter(structuralTarget, 3);
+        } catch {
+            fallbackToHome("Link Not Found on GitHub");
+        }
+    }
+
+    async function init() {
+        const { id, prefix } = getUlidAndPrefix();
+        if (!id) return fallbackToHome("Invalid Link Format");
+
+        // PRIORITY 1: HASH PARAMS (Custom unregistered repos)
+        const hashParams = getParamsFromHash();
+        if (hashParams) {
+            return fetchTarget(id, hashParams.user, hashParams.repo);
+        }
+
+        // PRIORITY 2: DOMAINS.JSON (Prefix or Default)
+        try {
+            const resDomain = await fetch("/domains.json");
+            const configs: Config[] = await resDomain.json();
+
+            const sanitizedPrefix = prefix
+                ? sanitizeGitHubIdentifier(prefix)
+                : null;
+            const config = sanitizedPrefix
+                ? configs.find(
+                      (c) =>
+                          sanitizeGitHubIdentifier(c.prefix) ===
+                          sanitizedPrefix,
+                  )
+                : configs.find((c) => c.prefix === "" || c.default);
+
+            if (!config) return fallbackToHome("Slug/Prefix Not Found");
+
+            return fetchTarget(
+                id,
+                sanitizeGitHubIdentifier(config.user),
+                sanitizeGitHubIdentifier(config.repo),
+            );
+        } catch (e) {
+            fallbackToHome("System Resolution Error");
+        }
+    }
+
+    init();
+</script>

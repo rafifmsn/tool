@@ -1,0 +1,8 @@
+---
+const { name, size = 20, className = "" } = Astro.props;
+
+const icons = await import("@lucide/astro");
+const IconComponent = (icons as Record<string, any>)[name];
+---
+
+{IconComponent && <IconComponent size={size} class={className} />}

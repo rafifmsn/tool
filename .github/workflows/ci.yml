@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Root Dependencies
+        run: pnpm install
+
+      - name: Install Link Dependencies
+        run: cd monorepo/link && pnpm install --ignore-workspace
+
+      - name: Install Note Dependencies
+        run: cd monorepo/note && pnpm install --ignore-workspace
+
+      - name: Run Tests
+        run: pnpm run test
+
+      - name: Build Root
+        run: pnpm run build
+
+      - name: Build Link
+        run: cd monorepo/link && pnpm run build
+
+      - name: Build Note
+        run: cd monorepo/note && pnpm run build

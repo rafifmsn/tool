@@ -1,0 +1,64 @@
+---
+import "@/styles/starwind.css";
+import { Font } from "astro:assets";
+import "../styles/global.css";
+
+interface Props {
+    title: string;
+}
+
+const { title = "Link Shortener" } = Astro.props;
+
+const brandName = import.meta.env.PUBLIC_BRAND_NAME || "Rafif Muchsin";
+const pageDescription = `A serverless, static URL shortener built on GitHub and Cloudflare Edge for ${brandName}.`;
+const pathname = Astro.url.pathname;
+const siteUrl = import.meta.env.PUBLIC_APP_URL || (Astro.site ? Astro.site.href : "https://s.rafifmsn.com");
+const canonicalURL = new URL(pathname.replace(/\.html$/, ''), siteUrl);
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+    <head>
+        <Font cssVariable="--font-sans" />
+        <Font cssVariable="--font-mono" />
+
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+
+        <title>{title}</title>
+        <meta name="title" content={title} />
+        <meta name="description" content={pageDescription} />
+        <meta name="author" content={brandName} />
+        <link rel="canonical" href={canonicalURL} />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalURL} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={new URL("/og.png", siteUrl)} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={canonicalURL} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={new URL("/og.png", siteUrl)} />
+
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta name="theme-color" content="#000000" />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+
+        <script
+            defer
+            src="https://analytics.rafifmsn.com/script.js"
+            data-website-id="bbd82246-e72d-41dc-8f4c-fbfa20e0f7ba"></script>
+    </head>
+    <body
+        class="bg-background text-foreground antialiased min-h-screen flex flex-col"
+    >
+        <slot />
+    </body>
+</html>
+

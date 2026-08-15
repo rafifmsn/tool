@@ -1,0 +1,463 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import pages from "../data/pages.json";
+import { Button } from "@/components/starwind/button";
+
+const page = pages.find((p) => p.slug === "text-compare")!;
+---
+
+<BaseLayout title={`${page.title} - Rafif Muchsin`} description={page.description}>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
+    <div class="text-center max-w-xl mx-auto mb-4">
+      <h1 class="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
+        {page.title}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {page.description}
+      </p>
+    </div>
+
+    <!-- Dual Textareas Input -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="text-left" class="text-xs font-semibold text-muted-foreground">Original Text (Left)</label>
+        <textarea
+          id="text-left"
+          placeholder="Paste original text here..."
+          class="h-44 p-4 text-xs font-mono bg-card border border-border rounded-xl focus:outline-none focus:border-outline resize-y w-full text-foreground"
+        ></textarea>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="text-right" class="text-xs font-semibold text-muted-foreground">Modified Text (Right)</label>
+        <textarea
+          id="text-right"
+          placeholder="Paste modified text here..."
+          class="h-44 p-4 text-xs font-mono bg-card border border-border rounded-xl focus:outline-none focus:border-outline resize-y w-full text-foreground"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Action Bar & Controls -->
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+      <div class="flex items-center gap-2">
+        <Button
+          id="btn-compare"
+          variant="default"
+          size="sm"
+          class="font-semibold px-6"
+        >
+          Compare Text
+        </Button>
+        <Button
+          id="btn-clear"
+          variant="outline"
+          size="sm"
+          class="font-semibold px-4"
+        >
+          Clear
+        </Button>
+      </div>
+
+      <!-- Diff Layout Selector -->
+      <div class="border border-border w-fit p-1 bg-muted rounded-xl hidden [&:not(.hidden)]:flex" id="view-mode-controls">
+        <Button
+          id="btn-view-split"
+          variant="default"
+          size="sm"
+          class="h-7 px-4 text-xs font-semibold shadow-xs"
+        >
+          Split View
+        </Button>
+        <Button
+          id="btn-view-unified"
+          variant="ghost"
+          size="sm"
+          class="h-7 px-4 text-xs font-semibold text-muted-foreground hover:text-foreground"
+        >
+          Unified View
+        </Button>
+      </div>
+    </div>
+
+    <!-- Loader Overlay -->
+    <div id="diff-loading" class="hidden text-center py-12 text-xs text-muted-foreground">
+      Running diff comparison engine...
+    </div>
+
+    <!-- Diff Results Output Workspace -->
+    <div id="diff-results" class="hidden overflow-hidden border border-border rounded-xl bg-card">
+      <!-- Split View Render (Table Grid) -->
+      <div id="diff-split-table" class="w-full overflow-x-auto text-xs font-mono select-text">
+        <div class="min-w-200 divide-y divide-border/40">
+          <!-- Rows will be dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Unified View Render -->
+      <div id="diff-unified-list" class="hidden w-full overflow-x-auto text-xs font-mono select-text">
+        <div class="min-w-100 divide-y divide-border/40">
+          <!-- Rows will be dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  /* Diff Highlight Variables */
+  .diff-del-row {
+    background-color: rgba(239, 68, 68, 0.08);
+  }
+  .diff-add-row {
+    background-color: rgba(34, 197, 94, 0.08);
+  }
+  .diff-del-inline {
+    background-color: rgba(239, 68, 68, 0.28);
+    text-decoration: line-through;
+    text-decoration-color: rgba(239, 68, 68, 0.5);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+  .diff-add-inline {
+    background-color: rgba(34, 197, 94, 0.28);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+  .diff-empty-row {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--accent) 0px,
+      var(--accent) 6px,
+      var(--card) 6px,
+      var(--card) 12px
+    );
+  }
+</style>
+
+<script>
+  import { loadDiffEngine } from "../utils/diff/diff";
+
+  // Inputs
+  const textLeft = document.getElementById("text-left") as HTMLTextAreaElement;
+  const textRight = document.getElementById("text-right") as HTMLTextAreaElement;
+  const btnCompare = document.getElementById("btn-compare")!;
+  const btnClear = document.getElementById("btn-clear")!;
+
+  // Output Views
+  const viewModeControls = document.getElementById("view-mode-controls")!;
+  const btnViewSplit = document.getElementById("btn-view-split")!;
+  const btnViewUnified = document.getElementById("btn-view-unified")!;
+  const diffLoading = document.getElementById("diff-loading")!;
+  const diffResults = document.getElementById("diff-results")!;
+
+  const diffSplitTable = document.getElementById("diff-split-table")!;
+  const diffUnifiedList = document.getElementById("diff-unified-list")!;
+
+  let diffEngine: any = null;
+  let currentRows: any[] = [];
+  let viewMode: "split" | "unified" = "split";
+
+  // Clear inputs
+  btnClear.addEventListener("click", () => {
+    textLeft.value = "";
+    textRight.value = "";
+    diffResults.classList.add("hidden");
+    viewModeControls.classList.add("hidden");
+  });
+
+  // Toggle View Modes
+  btnViewSplit.addEventListener("click", () => {
+    if (viewMode === "split") return;
+    viewMode = "split";
+    btnViewSplit.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-7 px-4 text-xs bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
+    btnViewUnified.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-7 px-4 text-xs hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
+    diffSplitTable.classList.remove("hidden");
+    diffUnifiedList.classList.add("hidden");
+  });
+
+  btnViewUnified.addEventListener("click", () => {
+    if (viewMode === "unified") return;
+    viewMode = "unified";
+    btnViewUnified.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-7 px-4 text-xs bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
+    btnViewSplit.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-7 px-4 text-xs hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
+    diffSplitTable.classList.add("hidden");
+    diffUnifiedList.classList.remove("hidden");
+  });
+
+  // Main Compare Event
+  btnCompare.addEventListener("click", runComparison);
+
+  async function runComparison() {
+    const leftText = textLeft.value;
+    const rightText = textRight.value;
+
+    diffResults.classList.add("hidden");
+    diffLoading.classList.remove("hidden");
+
+    // Load diff engine if not loaded
+    if (!diffEngine) {
+      try {
+        diffEngine = await loadDiffEngine();
+      } catch (err) {
+        console.error("Failed to load diff engine:", err);
+        diffLoading.textContent = "Error loading comparison engine.";
+        return;
+      }
+    }
+
+    diffLoading.classList.add("hidden");
+    diffResults.classList.remove("hidden");
+    viewModeControls.classList.remove("hidden");
+
+    // Compute diff
+    const diffs = diffEngine.diffLines(leftText, rightText);
+
+    // Process and align diff lines
+    processDiffLines(diffs);
+
+    // Render results
+    renderSplitView();
+    renderUnifiedView();
+  }
+
+  function escapeHtml(text: string) {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // Parse word levels to highlight precise line differences
+  function computeWordDiff(leftStr: string, rightStr: string) {
+    const wordDiffs = diffEngine.diffWords(leftStr, rightStr);
+    let leftHtml = "";
+    let rightHtml = "";
+
+    wordDiffs.forEach((part: any) => {
+      const escaped = escapeHtml(part.value);
+      if (part.removed) {
+        leftHtml += `<span class="diff-del-inline">${escaped}</span>`;
+      } else if (part.added) {
+        rightHtml += `<span class="diff-add-inline">${escaped}</span>`;
+      } else {
+        leftHtml += escaped;
+        rightHtml += escaped;
+      }
+    });
+
+    return { leftHtml, rightHtml };
+  }
+
+  // Process raw diffLines into side-by-side aligned structure
+  function processDiffLines(diffs: any[]) {
+    currentRows = [];
+    let leftLine = 1;
+    let rightLine = 1;
+
+    for (let i = 0; i < diffs.length; i++) {
+      const part = diffs[i];
+
+      if (!part.added && !part.removed) {
+        // Unchanged lines
+        const lines = part.value.split("\n");
+        if (lines[lines.length - 1] === "") lines.pop();
+
+        lines.forEach((line: string) => {
+          currentRows.push({
+            type: "unchanged",
+            leftNum: leftLine++,
+            rightNum: rightLine++,
+            leftVal: escapeHtml(line),
+            rightVal: escapeHtml(line)
+          });
+        });
+      } else if (part.removed) {
+        // Look ahead to check if there's an addition block adjacent to pair
+        const nextPart = diffs[i + 1];
+        const hasAdd = nextPart && nextPart.added;
+
+        const removedLines = part.value.split("\n");
+        if (removedLines[removedLines.length - 1] === "") removedLines.pop();
+
+        const addedLines = hasAdd ? nextPart.value.split("\n") : [];
+        if (hasAdd && addedLines[addedLines.length - 1] === "") addedLines.pop();
+
+        const maxLines = Math.max(removedLines.length, addedLines.length);
+
+        for (let k = 0; k < maxLines; k++) {
+          const lVal = removedLines[k] !== undefined ? removedLines[k] : null;
+          const rVal = addedLines[k] !== undefined ? addedLines[k] : null;
+
+          if (lVal !== null && rVal !== null) {
+            // Modified line: calculate word-level differences
+            const { leftHtml, rightHtml } = computeWordDiff(lVal, rVal);
+            currentRows.push({
+              type: "modified",
+              leftNum: leftLine++,
+              rightNum: rightLine++,
+              leftVal: leftHtml,
+              rightVal: rightHtml
+            });
+          } else if (lVal !== null) {
+            // Deletion only
+            currentRows.push({
+              type: "deleted",
+              leftNum: leftLine++,
+              rightNum: null,
+              leftVal: escapeHtml(lVal),
+              rightVal: null
+            });
+          } else if (rVal !== null) {
+            // Addition only
+            currentRows.push({
+              type: "added",
+              leftNum: null,
+              rightNum: rightLine++,
+              leftVal: null,
+              rightVal: escapeHtml(rVal)
+            });
+          }
+        }
+
+        if (hasAdd) i++; // skip additions since they're paired
+      } else if (part.added) {
+        // Addition only (no preceding removal)
+        const addedLines = part.value.split("\n");
+        if (addedLines[addedLines.length - 1] === "") addedLines.pop();
+
+        addedLines.forEach((line: string) => {
+          currentRows.push({
+            type: "added",
+            leftNum: null,
+            rightNum: rightLine++,
+            leftVal: null,
+            rightVal: escapeHtml(line)
+          });
+        });
+      }
+    }
+  }
+
+  // Renders the side-by-side split grid
+  function renderSplitView() {
+    let html = `
+      <div class="flex font-semibold border-b border-border bg-muted text-muted-foreground select-none">
+        <div class="w-1/2 flex border-r border-border">
+          <div class="w-12 text-center py-2 shrink-0">Line</div>
+          <div class="w-6 py-2 shrink-0"></div>
+          <div class="px-3 py-2 flex-1">Original Text</div>
+        </div>
+        <div class="w-1/2 flex">
+          <div class="w-12 text-center py-2 shrink-0">Line</div>
+          <div class="w-6 py-2 shrink-0"></div>
+          <div class="px-3 py-2 flex-1">Modified Text</div>
+        </div>
+      </div>
+    `;
+
+    currentRows.forEach((row) => {
+      let leftRowClass = "";
+      let rightRowClass = "";
+      let leftSymbol = "";
+      let rightSymbol = "";
+
+      if (row.type === "modified") {
+        leftRowClass = "diff-del-row";
+        rightRowClass = "diff-add-row";
+        leftSymbol = "-";
+        rightSymbol = "+";
+      } else if (row.type === "deleted") {
+        leftRowClass = "diff-del-row";
+        rightRowClass = "diff-empty-row";
+        leftSymbol = "-";
+      } else if (row.type === "added") {
+        leftRowClass = "diff-empty-row";
+        rightRowClass = "diff-add-row";
+        rightSymbol = "+";
+      }
+
+      html += `
+        <div class="flex hover:bg-muted/40 transition-colors">
+          <!-- Left Column -->
+          <div class="w-1/2 flex border-r border-border overflow-hidden ${leftRowClass}">
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.leftNum || ""}</div>
+            <div class="w-6 text-center py-1 select-none text-danger font-semibold shrink-0">${leftSymbol}</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.leftVal !== null ? row.leftVal : ""}</pre>
+          </div>
+          <!-- Right Column -->
+          <div class="w-1/2 flex overflow-hidden ${rightRowClass}">
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.rightNum || ""}</div>
+            <div class="w-6 text-center py-1 select-none text-success font-semibold shrink-0">${rightSymbol}</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.rightVal !== null ? row.rightVal : ""}</pre>
+          </div>
+        </div>
+      `;
+    });
+
+    diffSplitTable.firstElementChild!.innerHTML = html;
+  }
+
+  // Renders the single unified stacked column
+  function renderUnifiedView() {
+    let html = `
+      <div class="flex font-semibold border-b border-border bg-muted text-muted-foreground select-none">
+        <div class="w-12 text-center py-2 border-r border-border/40 shrink-0">Old</div>
+        <div class="w-12 text-center py-2 border-r border-border/40 shrink-0">New</div>
+        <div class="w-6 py-2 shrink-0"></div>
+        <div class="px-3 py-2 flex-1">Diff Comparison Patch</div>
+      </div>
+    `;
+
+    currentRows.forEach((row) => {
+      if (row.type === "unchanged") {
+        html += `
+          <div class="flex hover:bg-muted/40 transition-colors">
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.leftNum}</div>
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.rightNum}</div>
+            <div class="w-6 py-1 select-none shrink-0"></div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.leftVal}</pre>
+          </div>
+        `;
+      } else if (row.type === "modified") {
+        // Red Row (del)
+        html += `
+          <div class="flex diff-del-row hover:bg-muted/40 transition-colors">
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.leftNum}</div>
+            <div class="w-12 border-r border-border/40 shrink-0"></div>
+            <div class="w-6 text-center py-1 select-none text-danger font-semibold shrink-0">-</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.leftVal}</pre>
+          </div>
+        `;
+        // Green Row (add)
+        html += `
+          <div class="flex diff-add-row hover:bg-muted/40 transition-colors">
+            <div class="w-12 border-r border-border/40 shrink-0"></div>
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.rightNum}</div>
+            <div class="w-6 text-center py-1 select-none text-success font-semibold shrink-0">+</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.rightVal}</pre>
+          </div>
+        `;
+      } else if (row.type === "deleted") {
+        html += `
+          <div class="flex diff-del-row hover:bg-muted/40 transition-colors">
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.leftNum}</div>
+            <div class="w-12 border-r border-border/40 shrink-0"></div>
+            <div class="w-6 text-center py-1 select-none text-danger font-semibold shrink-0">-</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.leftVal}</pre>
+          </div>
+        `;
+      } else if (row.type === "added") {
+        html += `
+          <div class="flex diff-add-row hover:bg-muted/40 transition-colors">
+            <div class="w-12 border-r border-border/40 shrink-0"></div>
+            <div class="w-12 text-right pr-2 py-1 select-none text-muted-foreground border-r border-border/40 shrink-0 font-mono">${row.rightNum}</div>
+            <div class="w-6 text-center py-1 select-none text-success font-semibold shrink-0">+</div>
+            <pre class="px-3 py-1 flex-1 whitespace-pre-wrap font-mono break-all leading-relaxed">${row.rightVal}</pre>
+          </div>
+        `;
+      }
+    });
+
+    diffUnifiedList.firstElementChild!.innerHTML = html;
+  }
+</script>

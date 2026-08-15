@@ -1,0 +1,173 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Topbar from '../components/navigation/Topbar.astro';
+import Sidebar from '../components/navigation/Sidebar.astro';
+import EditorPanel from '../components/editor/EditorPanel.astro';
+---
+
+<BaseLayout title="Markdown Editor - Rafif Muchsin" description="A stateless local markdown editor featuring full LaTeX math parsing, live rendering, asset attachments, and complete codebase ZIP compilation.">
+  <body class="h-full w-full overflow-hidden">
+    <div id="app-root" class="flex flex-col h-full w-full overflow-hidden">
+      <Topbar showSidebarToggle={true} showEditorActions={true} />
+
+      <div class="flex flex-1 overflow-hidden h-[calc(100vh-var(--topbar-height))]">
+        <div id="sidebar-wrapper" class="h-full">
+          <Sidebar />
+        </div>
+
+        <main id="main-panel" class="flex-1 h-full max-h-full overflow-hidden relative">
+          <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center p-8">
+            <div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <span class="text-lg">📝</span>
+            </div>
+            <p class="text-sm text-muted-foreground max-w-xs">
+              <span class="hidden md:block">Click on an item to edit or preview</span>
+              <span class="block md:hidden">Edit & Preview</span>
+            </p>
+          </div>
+
+          <div id="editor-wrapper" class="hidden h-full max-h-full overflow-hidden">
+            <EditorPanel />
+          </div>
+
+          <div id="pdf-viewer" class="max-h-full overflow-hidden"></div>
+        </main>
+      </div>
+    </div>
+  </body>
+</BaseLayout>
+
+<style>
+</style>
+
+<style>
+  :root { height: 100%; }
+  body { height: 100%; margin: 0; padding: 0; }
+
+  #sidebar-wrapper.sidebar-hidden {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  #pdf-viewer {
+    display: none;
+    height: 100%;
+  }
+  #pdf-viewer.active {
+    display: flex;
+    flex-direction: column;
+  }
+  #pdf-viewer.active ~ #empty-state,
+  #pdf-viewer.active ~ #editor-wrapper {
+    display: none;
+  }
+
+  #editor-wrapper.preview-hidden #preview-container,
+  #editor-wrapper.preview-hidden #resize-handle {
+    display: none !important;
+  }
+
+  #editor-wrapper.preview-hidden #editor-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+  }
+</style>
+
+<script>
+// ── Sidebar toggle ──
+let sidebarVisible = true; 
+
+function applySidebar() {
+  const wrapper = document.getElementById('sidebar-wrapper');
+  if (!wrapper) return;
+  wrapper.classList.toggle('sidebar-hidden', !sidebarVisible);
+}
+applySidebar();
+
+document.addEventListener('toggle-sidebar', () => {
+  sidebarVisible = !sidebarVisible;
+  applySidebar();
+});
+
+document.addEventListener('toggle-sidebar', () => {
+  sidebarVisible = !sidebarVisible;
+  applySidebar();
+});
+
+document.addEventListener('toggle-sidebar', () => {
+  sidebarVisible = !sidebarVisible;
+  applySidebar();
+});
+
+// ── Preview toggle ──
+let previewVisible = true;
+
+function applyPreview() {
+  const wrapper = document.getElementById('editor-wrapper');
+  const btn = document.getElementById('btn-toggle-preview');
+  if (!wrapper || !btn) return;
+  
+  wrapper.classList.toggle('preview-hidden', !previewVisible);
+  btn.style.opacity = previewVisible ? '1' : '0.25';
+
+  const editorContainer = document.getElementById('editor-container');
+  const previewContainer = document.getElementById('preview-container');
+  if (previewVisible && editorContainer && previewContainer) {
+    editorContainer.style.removeProperty('width');
+    editorContainer.style.removeProperty('border-right');
+    previewContainer.style.removeProperty('width');
+    
+    const saved = localStorage.getItem('note-editor-split');
+    const ratio = saved ? saved + '%' : '50%';
+    document.documentElement.style.setProperty('--editor-ratio', ratio);
+    editorContainer.style.width = ratio;
+    previewContainer.style.width = `calc(100% - ${ratio} - 4px)`;
+  }
+}
+applyPreview();
+
+document.addEventListener('toggle-preview', () => {
+  previewVisible = !previewVisible;
+  applyPreview();
+});
+
+// ── File selection state ──
+document.addEventListener('file-selected', ((e: Event) => {
+  const ce = e as CustomEvent;
+  const fileId = ce.detail.fileId;
+  const emptyState = document.getElementById('empty-state');
+  const editorWrapper = document.getElementById('editor-wrapper');
+  const pdfViewer = document.getElementById('pdf-viewer');
+  const previewBtn = document.getElementById('btn-toggle-preview');
+
+  pdfViewer?.classList.remove('active');
+
+  if (fileId) {
+    emptyState?.classList.add('hidden');
+    editorWrapper?.classList.remove('hidden');
+    previewBtn?.classList.remove('hidden');
+  } else {
+    emptyState?.classList.remove('hidden');
+    editorWrapper?.classList.add('hidden');
+    previewBtn?.classList.add('hidden');
+  }
+}) as EventListener);
+
+// ── Open file from query param (e.g. from share.astro redirect) ──
+(function loadFileFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const fileId = params.get('fileId');
+  if (fileId) {
+    // 1. Wait a beat for sidebar/editor to init, then signal to open
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('open-file-by-id', { detail: { fileId } }));
+    }, 200);
+
+    // 2. Cleanly scrub the query parameters from the browser's address bar instantly
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+})();
+</script>

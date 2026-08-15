@@ -1,0 +1,41 @@
+---
+import "@/styles/starwind.css";
+import "../styles/globals.css";
+import Head from "../components/Head.astro";
+import { Button } from "@/components/starwind/button";
+
+const title = "404 - Page Not Found";
+const description = "The page you are looking for does not exist.";
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <Head title={title} description={description} />
+  </head>
+  <body class="bg-background text-foreground antialiased min-h-dvh flex flex-col justify-between">
+
+    <!-- Empty spacer to balance the vertical flex centering with the footer below -->
+    <div class="h-10 invisible shrink-0"></div>
+
+    <!-- Vertically and Horizontally Centered Content -->
+    <main class="flex flex-col items-center px-6 text-center">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-3">Page not found</h1>
+      <p class="text-sm text-muted-foreground mb-8 leading-relaxed max-w-75 text-balance">The tool or page you're trying to access doesn't exist or has been moved.</p>
+      <Button href="/" variant="default" size="sm" class="px-5 font-semibold text-sm">Back to tools</Button>
+    </main>
+
+    <!-- Footer -->
+    <footer class="flex items-center justify-between h-10 px-4 border-t border-border bg-card text-xs text-muted-foreground shrink-0">
+      <span>
+        <a href="https://x.com/rafifmsn" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground! transition-colors underline">𝕏/@rafifmsn</a>
+      </span>
+      <div class="flex items-center gap-4">
+        <a href="/privacy" class="hover:text-foreground! transition-colors">Privacy</a>
+        <a href="/terms" class="hover:text-foreground! transition-colors">Terms</a>
+        <a href="https://go.rafifmsn.com/contact-form" target="_blank" rel="noopener noreferrer" class="hover:text-foreground! transition-colors">Suggestions</a>
+      </div>
+    </footer>
+
+  </body>
+</html>
