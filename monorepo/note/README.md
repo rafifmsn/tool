@@ -19,9 +19,9 @@ Consider copy and paste the test file from [TEST.md](./TEST.md) into the editor 
 ## Quick Start
 
 ```bash
-npm install
-npm run dev
-npm run build
+pnpm install
+pnpm run dev
+pnpm run build
 ```
 
 ## Project Structure

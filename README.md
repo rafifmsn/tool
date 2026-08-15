@@ -16,32 +16,32 @@
 
 ## Getting Started
 
-The project uses **pnpm** as its package manager.
+The project uses **pnpm** as its package manager. A single install from the root covers the main site and all subprojects in `monorepo/`.
 
 ```bash
-pnpm install
-pnpm run dev      # http://localhost:4321
-pnpm run build    # static output → dist/
-pnpm run preview  # preview the built site
-pnpm run test     # runs the test suite
+pnpm install          # installs everything — root + all monorepo subprojects
+pnpm run dev          # http://localhost:4321
+pnpm run build        # static output → dist/
+pnpm run preview      # preview the built site
+pnpm run test         # runs the full test suite
 ```
 
 ## Monorepo Subprojects
 
-Under `monorepo/` we have independent static subprojects configured with standalone package rules:
+Under `monorepo/` we have independent static subprojects:
 
 - **[link](./monorepo/link/README.md)**: Serverless URL Shortener.
-- **[note](./monorepo/note/README.md)**: Markdown Editor (latex, mermaid, file management), Kanban, and Task.
+- **[note](./monorepo/note/README.md)**: Markdown Editor (LaTeX, Mermaid, file management), Kanban, and Task.
 
-To work inside a subproject, cd into its folder and use pnpm ignoring workspaces:
+Dependencies for all subprojects are installed by the root `pnpm install` above. If you want to run or build a specific subproject on its own:
 
 ```bash
-cd monorepo/note
-pnpm install --ignore-workspace
+cd monorepo/note      # or monorepo/link
 pnpm run dev
 pnpm run build
-pnpm run test
 ```
+
+To add a new subproject, create a folder under `monorepo/`, add it with its own `package.json`, and register it in the root `pnpm-workspace.yaml` under `packages`.
 
 ## Project Structure
 
