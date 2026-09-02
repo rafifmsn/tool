@@ -7,17 +7,18 @@ import Topbar from "../components/Topbar.astro";
 export interface Props {
   title: string;
   description: string;
+  ogImage?: string;
   showTopbar?: boolean;
   topbarTitle?: string;
 }
 
-const { title, description, showTopbar = true, topbarTitle } = Astro.props;
+const { title, description, ogImage, showTopbar = true, topbarTitle } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en" class="dark">
   <head>
-    <Head title={title} description={description} />
+    <Head title={title} description={description} ogImage={ogImage} />
   </head>
   <body class="bg-background text-foreground antialiased min-h-dvh flex flex-col">
     {
@@ -37,7 +38,7 @@ const { title, description, showTopbar = true, topbarTitle } = Astro.props;
       <div class="flex items-center gap-4">
         <a href="/privacy" class="hover:text-foreground! transition-colors">Privacy</a>
         <a href="/terms" class="hover:text-foreground! transition-colors">Terms</a>
-        <a href="https://go.rafifmsn.com/contact-form" target="_blank" rel="noopener noreferrer" class="hover:text-foreground! transition-colors">Suggestions</a>
+        <a href="https://go.rafifmsn.com/q/contact-form" target="_blank" rel="noopener noreferrer" class="hover:text-foreground! transition-colors">Suggestions</a>
       </div>
     </footer>
   </body>
