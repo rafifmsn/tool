@@ -34,7 +34,10 @@ export async function renderQRCode(
   });
 }
 
-export function downloadQRCode(canvas: HTMLCanvasElement, filename = "qrcode.png"): void {
+export function downloadQRCode(
+  canvas: HTMLCanvasElement,
+  filename = "qrcode.png",
+): void {
   const dataUrl = canvas.toDataURL("image/png");
   const link = document.createElement("a");
   link.download = filename;

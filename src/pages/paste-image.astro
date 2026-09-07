@@ -120,6 +120,9 @@ const page = pages.find((p) => p.slug === "paste-image")!;
 </BaseLayout>
 
 <script>
+  import { readImageFile } from "../utils/paste-image/reader";
+  import { downloadImage } from "../utils/paste-image/exporter";
+
   const dropzone = document.getElementById("dropzone")!;
   const fileInput = document.getElementById("file-input") as HTMLInputElement;
   const dropzoneWrapper = document.getElementById("dropzone-wrapper")!;
@@ -137,8 +140,26 @@ const page = pages.find((p) => p.slug === "paste-image")!;
   const btnDownloadJpg = document.getElementById("btn-download-jpg")!;
   const btnReset = document.getElementById("btn-reset")!;
 
-  let currentBlob: Blob | null = null;
-  let currentFileExtension: string = "png";
+  let currentImage: HTMLImageElement | null = null;
+
+  async function handleFile(file: File) {
+    try {
+      const meta = await readImageFile(file);
+      currentImage = meta.img;
+      previewImage.src = meta.dataUrl;
+      filenameInput.value = meta.baseName;
+      metaMime.textContent = meta.mime;
+      metaSize.textContent = meta.sizeText;
+      metaDimensions.textContent = meta.dimensions;
+
+      dropzoneWrapper.classList.add("hidden");
+      previewWrapper.classList.remove("hidden");
+      settingsWrapper.classList.remove("hidden");
+      previewWrapper.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err: any) {
+      alert(err.message || "Failed to read image file.");
+    }
+  }
 
   // Drag and Drop listeners
   dropzone.addEventListener("dragover", (e) => {
@@ -155,7 +176,7 @@ const page = pages.find((p) => p.slug === "paste-image")!;
     dropzone.classList.remove("border-outline", "bg-muted");
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
-      handleImageFile(files[0]);
+      handleFile(files[0]);
     }
   });
 
@@ -163,13 +184,12 @@ const page = pages.find((p) => p.slug === "paste-image")!;
   fileInput.addEventListener("change", () => {
     const files = fileInput.files;
     if (files && files.length > 0) {
-      handleImageFile(files[0]);
+      handleFile(files[0]);
     }
   });
 
   // Clipboard paste listener
   document.addEventListener("paste", (e) => {
-    // Only capture pastes if dropzone is currently visible (prevent hijacking pastes on settings view)
     if (dropzoneWrapper.classList.contains("hidden")) return;
 
     const items = e.clipboardData?.items;
@@ -178,7 +198,7 @@ const page = pages.find((p) => p.slug === "paste-image")!;
       if (items[i].type.startsWith("image/")) {
         const file = items[i].getAsFile();
         if (file) {
-          handleImageFile(file);
+          handleFile(file);
           break;
         }
       }
@@ -187,7 +207,7 @@ const page = pages.find((p) => p.slug === "paste-image")!;
 
   // Reset tool state
   btnReset.addEventListener("click", () => {
-    currentBlob = null;
+    currentImage = null;
     previewImage.src = "";
     fileInput.value = "";
     filenameInput.value = "pasted-image";
@@ -200,97 +220,16 @@ const page = pages.find((p) => p.slug === "paste-image")!;
     settingsWrapper.classList.add("hidden");
   });
 
-  // Handle uploaded or pasted file
-  function handleImageFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      alert("Invalid file type. Please select or paste an image.");
-      return;
+  // Download triggers
+  btnDownloadPng.addEventListener("click", () => {
+    if (currentImage) {
+      downloadImage(currentImage, "png", filenameInput.value);
     }
+  });
 
-    currentBlob = file;
-
-    // Parse name and extension
-    const extMatch = file.name.match(/\.([^.]+)$/);
-    currentFileExtension = extMatch ? extMatch[1] : "png";
-    const baseName = file.name.substring(0, file.name.length - (extMatch ? extMatch[0].length : 0));
-    if (baseName && baseName !== "image") {
-      filenameInput.value = baseName;
-    } else {
-      filenameInput.value = "pasted-image";
+  btnDownloadJpg.addEventListener("click", () => {
+    if (currentImage) {
+      downloadImage(currentImage, "jpg", filenameInput.value);
     }
-
-    // Set MIME
-    metaMime.textContent = file.type;
-
-    // Set Size
-    metaSize.textContent = formatBytes(file.size);
-
-    // Read image for preview and dimensions
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const src = e.target?.result as string;
-      previewImage.src = src;
-
-      const img = new Image();
-      img.onload = () => {
-        metaDimensions.textContent = `${img.width} × ${img.height} px`;
-
-        // Toggle view containers
-        dropzoneWrapper.classList.add("hidden");
-        previewWrapper.classList.remove("hidden");
-        settingsWrapper.classList.remove("hidden");
-
-        // Scroll to preview
-        previewWrapper.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      };
-      img.src = src;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // Format bytes helper
-  function formatBytes(bytes: number, decimals = 2) {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
-  }
-
-  // Download Trigger
-  function triggerDownload(format: "png" | "jpg") {
-    if (!currentBlob) return;
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d")!;
-
-      if (format === "jpg") {
-        // Draw solid white background for JPG
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      ctx.drawImage(img, 0, 0);
-
-      // Trigger download
-      const mime = format === "png" ? "image/png" : "image/jpeg";
-      const quality = format === "png" ? undefined : 0.95;
-      const dataUrl = canvas.toDataURL(mime, quality);
-
-      const link = document.createElement("a");
-      const name = filenameInput.value.trim() || "image";
-      link.download = `${name}.${format}`;
-      link.href = dataUrl;
-      link.click();
-    };
-    img.src = previewImage.src;
-  }
-
-  btnDownloadPng.addEventListener("click", () => triggerDownload("png"));
-  btnDownloadJpg.addEventListener("click", () => triggerDownload("jpg"));
+  });
 </script>

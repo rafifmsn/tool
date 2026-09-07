@@ -37,7 +37,8 @@ export async function scanCanvasQR(
 ): Promise<string | null> {
   const jsQR = await getJSQR();
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  const imgData = existingData || ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const imgData =
+    existingData || ctx.getImageData(0, 0, canvas.width, canvas.height);
   const code = decodeQRCode(jsQR, imgData);
   return code?.data ?? null;
 }

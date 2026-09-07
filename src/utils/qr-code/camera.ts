@@ -35,9 +35,20 @@ export class CameraScanner {
           const ctx = this.canvas.getContext("2d")!;
           this.canvas.width = this.video.videoWidth;
           this.canvas.height = this.video.videoHeight;
-          ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+          ctx.drawImage(
+            this.video,
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+          );
 
-          const imgData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+          const imgData = ctx.getImageData(
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+          );
           const code = decodeQRCode(this.jsQR, imgData);
 
           if (code && code.data) {

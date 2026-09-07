@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { invertImageData, decodeQRCode } from "../src/utils/qr/decoder";
+import { invertImageData, decodeQRCode } from "../src/utils/qr-code/decoder";
 
 describe("QR Decoder & Inverter Suite", () => {
   test("should invert RGB channels and leave Alpha intact", () => {

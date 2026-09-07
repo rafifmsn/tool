@@ -295,9 +295,9 @@ const page = pages.find((p) => p.slug === "qr-code")!;
 </BaseLayout>
 
 <script>
-  import { renderQRCode, downloadQRCode } from "../utils/qr/generator";
-  import { CameraScanner } from "../utils/qr/camera";
-  import { drawImageToCanvas, invertCanvasPixels, scanCanvasQR } from "../utils/qr/image";
+  import { renderQRCode, downloadQRCode } from "../utils/qr-code/generator";
+  import { CameraScanner } from "../utils/qr-code/camera";
+  import { drawImageToCanvas, invertCanvasPixels, scanCanvasQR } from "../utils/qr-code/image";
   import { setButtonDisabled } from "../utils/dom";
 
   // Tabs & Panels
