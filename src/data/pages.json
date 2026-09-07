@@ -61,5 +61,12 @@
     "type": "external",
     "icon": "Link",
     "link": "https://s.rafifmsn.com"
+  },
+  {
+    "title": "Link Verification",
+    "description": "High-performance link and domain verification against trusted whitelist databases.",
+    "type": "external",
+    "icon": "ShieldCheck",
+    "link": "https://trust.rafifmsn.com"
   }
 ]

@@ -51,11 +51,20 @@ const page = pages.find((p) => p.slug === "qr-code")!;
       <div class="flex flex-col gap-4">
         <div class="border border-border rounded-xl bg-card p-6 flex flex-col items-center justify-center gap-4 text-center">
           <h3 class="text-sm font-semibold text-foreground w-full text-left">Generated QR</h3>
-          <div class="w-full max-w-50 aspect-square bg-white rounded-lg flex items-center justify-center p-3 border border-outline relative overflow-hidden" id="qr-container">
+          <div class="w-full max-w-50 aspect-square bg-white rounded-lg flex items-center justify-center p-3 border border-outline relative overflow-hidden transition-colors" id="qr-container">
             <canvas id="qr-canvas" class="w-full h-full max-w-full max-h-full"></canvas>
             <div id="qr-placeholder" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted-foreground select-none">
               Enter text to generate
             </div>
+          </div>
+          <div class="flex flex-col gap-3 py-1 w-full text-left">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <input type="checkbox" id="invert-qr-toggle" class="rounded border-border bg-accent text-foreground focus:ring-0 w-4 h-4 cursor-pointer" />
+              <div class="flex flex-col">
+                <span class="text-xs font-medium text-foreground">Invert Color</span>
+                <span class="text-[10px] text-muted-foreground">White QR code on dark background</span>
+              </div>
+            </label>
           </div>
           <Button
             id="btn-download-qr"
@@ -76,64 +85,145 @@ const page = pages.find((p) => p.slug === "qr-code")!;
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Live Scanner View -->
         <div class="md:col-span-2 border border-border rounded-xl bg-card p-6 flex flex-col gap-4">
-          <h3 class="text-sm font-semibold text-foreground">Camera Scanner</h3>
-
-          <div class="relative border border-border rounded-xl bg-accent overflow-hidden flex items-center justify-center aspect-video max-h-100">
-            <!-- Video feed -->
-            <video id="scanner-video" class="w-full h-full object-cover hidden" playsinline></video>
-            <!-- Canvas helper for frame capture -->
-            <canvas id="scanner-canvas" class="hidden"></canvas>
-
-            <!-- Start Scanner Button / Prompt -->
-            <div id="scanner-prompt" class="flex flex-col items-center gap-3 p-8 text-center select-none">
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0Z"/><path d="m15 10-5 5-2-2"/></svg>
-              <span class="text-sm font-semibold text-foreground">Request Camera Permission</span>
-              <span class="hidden md:block text-xs text-muted-foreground max-w-xs leading-relaxed">
-                Click start to activate your camera and point it at a QR code to decode its contents.
-              </span>
-              <Button
-                id="btn-start-scanner"
-                variant="default"
-                size="sm"
-                class="mt-2 font-semibold px-6"
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-foreground">Scanner Input</h3>
+            <div class="flex items-center gap-1 p-0.5 bg-muted rounded-lg text-xs" id="scanner-mode-switch">
+              <button
+                id="btn-mode-camera"
+                type="button"
+                class="px-3 py-1 font-semibold rounded-md transition-all bg-foreground text-background shadow-xs cursor-pointer"
               >
-                Start Scanner
-              </Button>
-            </div>
-
-            <!-- Error Notice (Accidental blocks) -->
-            <div id="scanner-error" class="hidden flex-col items-center gap-3 p-8 text-center [&:not(.hidden)]:flex">
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-              <span class="text-sm font-semibold text-error">Camera Access Blocked</span>
-              <span class="text-xs text-muted-foreground max-w-sm leading-relaxed">
-                Please allow camera permissions in your browser's site settings and refresh the page.
-              </span>
-              <Button
-                id="btn-retry-scanner"
-                variant="error"
-                size="sm"
-                class="mt-2 font-semibold px-6"
+                Camera
+              </button>
+              <button
+                id="btn-mode-upload"
+                type="button"
+                class="px-3 py-1 font-semibold rounded-md transition-all text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                Retry
-              </Button>
-            </div>
-
-            <!-- Scanner Status Info -->
-            <div id="scanner-loading" class="hidden absolute inset-0 bg-muted/80 items-center justify-center text-xs text-muted-foreground select-none [&:not(.hidden)]:flex">
-              Initializing camera...
+                Upload Image
+              </button>
             </div>
           </div>
 
-          <!-- Controls -->
-          <div class="flex justify-end">
-            <Button
-              id="btn-stop-scanner"
-              variant="outline"
-              size="sm"
-              class="hidden font-semibold"
+          <!-- Camera Scanner Mode -->
+          <div id="scanner-camera-panel" class="flex flex-col gap-4">
+            <div class="relative border border-border rounded-xl bg-accent overflow-hidden flex items-center justify-center aspect-video max-h-100">
+              <!-- Video feed -->
+              <video id="scanner-video" class="w-full h-full object-cover hidden" playsinline></video>
+              <!-- Canvas helper for frame capture -->
+              <canvas id="scanner-canvas" class="hidden"></canvas>
+
+              <!-- Start Scanner Button / Prompt -->
+              <div id="scanner-prompt" class="flex flex-col items-center gap-3 p-8 text-center select-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0Z"/><path d="m15 10-5 5-2-2"/></svg>
+                <span class="text-sm font-semibold text-foreground">Request Camera Permission</span>
+                <span class="hidden md:block text-xs text-muted-foreground max-w-xs leading-relaxed">
+                  Click start to activate your camera and point it at a QR code to decode its contents.
+                </span>
+                <Button
+                  id="btn-start-scanner"
+                  variant="default"
+                  size="sm"
+                  class="mt-2 font-semibold px-6"
+                >
+                  Start Scanner
+                </Button>
+              </div>
+
+              <!-- Error Notice (Accidental blocks) -->
+              <div id="scanner-error" class="hidden flex-col items-center gap-3 p-8 text-center [&:not(.hidden)]:flex">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                <span class="text-sm font-semibold text-error">Camera Access Blocked</span>
+                <span class="text-xs text-muted-foreground max-w-sm leading-relaxed">
+                  Please allow camera permissions in your browser or switch to image upload.
+                </span>
+                <div class="flex gap-2 mt-2">
+                  <Button
+                    id="btn-retry-scanner"
+                    variant="error"
+                    size="sm"
+                    class="font-semibold px-4"
+                  >
+                    Retry
+                  </Button>
+                  <Button
+                    id="btn-error-to-upload"
+                    variant="outline"
+                    size="sm"
+                    class="font-semibold px-4"
+                  >
+                    Upload Image
+                  </Button>
+                </div>
+              </div>
+
+              <!-- Scanner Status Info -->
+              <div id="scanner-loading" class="hidden absolute inset-0 bg-muted/80 items-center justify-center text-xs text-muted-foreground select-none [&:not(.hidden)]:flex">
+                Initializing camera...
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex justify-end">
+              <Button
+                id="btn-stop-scanner"
+                variant="outline"
+                size="sm"
+                class="hidden font-semibold"
+              >
+                Stop Camera
+              </Button>
+            </div>
+          </div>
+
+          <!-- Upload Image Scanner Mode -->
+          <div id="scanner-upload-panel" class="hidden flex-col gap-4 [&:not(.hidden)]:flex">
+            <!-- Dropzone -->
+            <div
+              id="upload-dropzone"
+              class="flex flex-col items-center justify-center min-h-64 border-2 border-dashed border-border rounded-xl bg-accent hover:bg-muted hover:border-outline transition-all cursor-pointer p-6 relative select-none"
             >
-              Stop Camera
-            </Button>
+              <input type="file" id="upload-file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" />
+              <div class="text-center flex flex-col items-center gap-3 select-none pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <span class="text-sm font-semibold text-foreground">Upload, drag, or paste image</span>
+                <span class="text-xs text-muted-foreground">Select an image file or press Ctrl+V from anywhere</span>
+              </div>
+            </div>
+
+            <!-- Uploaded Image Preview & Processing -->
+            <div id="upload-preview-wrapper" class="hidden flex-col gap-4 [&:not(.hidden)]:flex">
+              <div class="relative border border-border rounded-xl bg-accent overflow-hidden flex items-center justify-center p-4 min-h-64 max-h-96">
+                <img id="upload-preview-img" src="" alt="Uploaded QR preview" class="max-h-80 object-contain max-w-full rounded-lg" />
+                <canvas id="upload-canvas" class="hidden"></canvas>
+                <div id="upload-loading" class="hidden absolute inset-0 bg-muted/80 items-center justify-center text-xs text-muted-foreground select-none [&:not(.hidden)]:flex">
+                  Decoding QR code...
+                </div>
+              </div>
+
+              <!-- Upload Actions & Status -->
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div id="upload-status" class="text-xs text-muted-foreground"></div>
+                <div class="flex gap-2">
+                  <Button
+                    id="btn-upload-invert"
+                    variant="outline"
+                    size="sm"
+                    class="font-semibold text-xs"
+                  >
+                    Invert Colors
+                  </Button>
+                  <Button
+                    id="btn-upload-new"
+                    variant="ghost"
+                    size="sm"
+                    class="font-semibold text-xs border border-border"
+                  >
+                    Upload Another
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -206,6 +296,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
 
 <script>
   import { loadQRCodeGenerator, loadJSQR } from "../utils/qr/loader";
+  import { decodeQRCode, invertImageData } from "../utils/qr/decoder";
   import { setButtonDisabled } from "../utils/dom";
 
   // Navigation
@@ -217,18 +308,40 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   // Generator Elements
   const qrInput = document.getElementById("qr-input") as HTMLTextAreaElement;
   const qrCanvas = document.getElementById("qr-canvas") as HTMLCanvasElement;
+  const qrContainer = document.getElementById("qr-container")!;
   const qrPlaceholder = document.getElementById("qr-placeholder")!;
+  const invertQrToggle = document.getElementById("invert-qr-toggle") as HTMLInputElement;
   const btnDownloadQr = document.getElementById("btn-download-qr")!;
 
-  // Scanner Elements
+  // Scanner Mode Switch
+  const btnModeCamera = document.getElementById("btn-mode-camera")!;
+  const btnModeUpload = document.getElementById("btn-mode-upload")!;
+  const scannerCameraPanel = document.getElementById("scanner-camera-panel")!;
+  const scannerUploadPanel = document.getElementById("scanner-upload-panel")!;
+
+  // Camera Scanner Elements
   const btnStartScanner = document.getElementById("btn-start-scanner")!;
   const btnStopScanner = document.getElementById("btn-stop-scanner")!;
   const btnRetryScanner = document.getElementById("btn-retry-scanner")!;
+  const btnErrorToUpload = document.getElementById("btn-error-to-upload")!;
   const scannerVideo = document.getElementById("scanner-video") as HTMLVideoElement;
   const scannerCanvas = document.getElementById("scanner-canvas") as HTMLCanvasElement;
   const scannerPrompt = document.getElementById("scanner-prompt")!;
   const scannerError = document.getElementById("scanner-error")!;
   const scannerLoading = document.getElementById("scanner-loading")!;
+
+  // Upload Scanner Elements
+  const uploadDropzone = document.getElementById("upload-dropzone")!;
+  const uploadFileInput = document.getElementById("upload-file-input") as HTMLInputElement;
+  const uploadPreviewWrapper = document.getElementById("upload-preview-wrapper")!;
+  const uploadPreviewImg = document.getElementById("upload-preview-img") as HTMLImageElement;
+  const uploadCanvas = document.getElementById("upload-canvas") as HTMLCanvasElement;
+  const uploadLoading = document.getElementById("upload-loading")!;
+  const uploadStatus = document.getElementById("upload-status")!;
+  const btnUploadInvert = document.getElementById("btn-upload-invert")!;
+  const btnUploadNew = document.getElementById("btn-upload-new")!;
+
+  // Result Elements
   const scanResultEmpty = document.getElementById("scan-result-empty")!;
   const scanResultContent = document.getElementById("scan-result-content")!;
   const resultText = document.getElementById("result-text")!;
@@ -239,6 +352,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   let stream: MediaStream | null = null;
   let animFrameId: number | null = null;
   let activeTab: "generate" | "scan" = "generate";
+  let scannerMode: "camera" | "upload" = "camera";
 
   // Tab switching
   tabGenerate.addEventListener("click", () => {
@@ -266,6 +380,28 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     workspaceScan.classList.remove("hidden");
   });
 
+  // Scanner Sub-mode Switching (Camera vs Upload)
+  function switchScannerMode(mode: "camera" | "upload") {
+    scannerMode = mode;
+
+    if (mode === "camera") {
+      btnModeCamera.className = "px-3 py-1 font-semibold rounded-md transition-all bg-foreground text-background shadow-xs cursor-pointer";
+      btnModeUpload.className = "px-3 py-1 font-semibold rounded-md transition-all text-muted-foreground hover:text-foreground cursor-pointer";
+      scannerCameraPanel.classList.remove("hidden");
+      scannerUploadPanel.classList.add("hidden");
+    } else {
+      stopScanner();
+      btnModeUpload.className = "px-3 py-1 font-semibold rounded-md transition-all bg-foreground text-background shadow-xs cursor-pointer";
+      btnModeCamera.className = "px-3 py-1 font-semibold rounded-md transition-all text-muted-foreground hover:text-foreground cursor-pointer";
+      scannerUploadPanel.classList.remove("hidden");
+      scannerCameraPanel.classList.add("hidden");
+    }
+  }
+
+  btnModeCamera.addEventListener("click", () => switchScannerMode("camera"));
+  btnModeUpload.addEventListener("click", () => switchScannerMode("upload"));
+  btnErrorToUpload.addEventListener("click", () => switchScannerMode("upload"));
+
   // ==================== GENERATOR LOGIC ====================
   let qrcodeLib: any = null;
 
@@ -289,21 +425,31 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     qrPlaceholder.classList.add("hidden");
     setButtonDisabled(btnDownloadQr, false);
 
+    const isInverted = invertQrToggle.checked;
+    if (isInverted) {
+      qrContainer.classList.remove("bg-white");
+      qrContainer.classList.add("bg-[#09090b]");
+    } else {
+      qrContainer.classList.remove("bg-[#09090b]");
+      qrContainer.classList.add("bg-white");
+    }
+
     // Render code on canvas
     qrcodeLib.toCanvas(qrCanvas, value, {
       width: 256,
       margin: 1.5,
       color: {
-        dark: "#000000",
-        light: "#ffffff"
+        dark: isInverted ? "#fafafa" : "#000000",
+        light: isInverted ? "#09090b" : "#ffffff"
       }
     }, (err: any) => {
       if (err) console.error("Error rendering QR canvas:", err);
     });
   }
 
-  // Bind input keyups
+  // Bind input and invert toggle
   qrInput.addEventListener("input", generateQR);
+  invertQrToggle.addEventListener("change", generateQR);
 
   // Download QR code
   btnDownloadQr.addEventListener("click", () => {
@@ -317,6 +463,13 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   // ==================== SCANNER LOGIC ====================
   let jsQRDec: any = null;
 
+  async function ensureJSQR(): Promise<any> {
+    if (!jsQRDec) {
+      jsQRDec = await loadJSQR();
+    }
+    return jsQRDec;
+  }
+
   async function startScanner() {
     scannerPrompt.classList.add("hidden");
     scannerError.classList.add("hidden");
@@ -325,10 +478,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     scanResultEmpty.classList.remove("hidden");
 
     try {
-      // Lazy load jsQR
-      if (!jsQRDec) {
-        jsQRDec = await loadJSQR();
-      }
+      await ensureJSQR();
 
       // Request permissions
       stream = await navigator.mediaDevices.getUserMedia({
@@ -360,9 +510,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
       ctx.drawImage(scannerVideo, 0, 0, scannerCanvas.width, scannerCanvas.height);
 
       const imgData = ctx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-      const code = jsQRDec(imgData.data, imgData.width, imgData.height, {
-        inversionAttempts: "dontInvert",
-      });
+      const code = decodeQRCode(jsQRDec, imgData);
 
       if (code && code.data) {
         handleScanResult(code.data);
@@ -402,6 +550,147 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     btnStopScanner.classList.add("hidden");
     scannerPrompt.classList.remove("hidden");
   }
+
+  // ==================== IMAGE UPLOAD SCANNER LOGIC ====================
+  async function processImageFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file.");
+      return;
+    }
+
+    try {
+      await ensureJSQR();
+    } catch (err) {
+      console.error("Failed to load jsQR:", err);
+      return;
+    }
+
+    switchScannerMode("upload");
+
+    uploadDropzone.classList.add("hidden");
+    uploadPreviewWrapper.classList.remove("hidden");
+    uploadLoading.classList.remove("hidden");
+    uploadStatus.textContent = "";
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        uploadPreviewImg.src = src;
+        decodeImageElement(img);
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function decodeImageElement(img: HTMLImageElement) {
+    uploadLoading.classList.remove("hidden");
+
+    setTimeout(() => {
+      const ctx = uploadCanvas.getContext("2d", { willReadFrequently: true })!;
+      uploadCanvas.width = img.naturalWidth || img.width;
+      uploadCanvas.height = img.naturalHeight || img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, uploadCanvas.width, uploadCanvas.height);
+      const code = decodeQRCode(jsQRDec, imgData);
+
+      uploadLoading.classList.add("hidden");
+
+      if (code && code.data) {
+        handleScanResult(code.data);
+        uploadStatus.textContent = "QR code decoded successfully.";
+        uploadStatus.className = "text-xs text-foreground";
+      } else {
+        uploadStatus.textContent = "No QR code detected. Try inverting colors or using a clearer image.";
+        uploadStatus.className = "text-xs text-error";
+      }
+    }, 50);
+  }
+
+  // Invert colors of uploaded image
+  btnUploadInvert.addEventListener("click", () => {
+    if (!uploadCanvas.width || !uploadCanvas.height) return;
+
+    uploadLoading.classList.remove("hidden");
+
+    setTimeout(() => {
+      const ctx = uploadCanvas.getContext("2d", { willReadFrequently: true })!;
+      const imgData = ctx.getImageData(0, 0, uploadCanvas.width, uploadCanvas.height);
+      const invertedPixels = invertImageData(imgData.data);
+      const newImgData = ctx.createImageData(uploadCanvas.width, uploadCanvas.height);
+      newImgData.data.set(invertedPixels);
+      ctx.putImageData(newImgData, 0, 0);
+
+      uploadPreviewImg.src = uploadCanvas.toDataURL();
+
+      const code = decodeQRCode(jsQRDec, newImgData);
+      uploadLoading.classList.add("hidden");
+
+      if (code && code.data) {
+        handleScanResult(code.data);
+        uploadStatus.textContent = "QR code decoded successfully.";
+        uploadStatus.className = "text-xs text-foreground";
+      } else {
+        uploadStatus.textContent = "No QR code detected after color inversion.";
+        uploadStatus.className = "text-xs text-error";
+      }
+    }, 50);
+  });
+
+  // Reset upload view for another file
+  btnUploadNew.addEventListener("click", () => {
+    uploadFileInput.value = "";
+    uploadPreviewImg.src = "";
+    uploadPreviewWrapper.classList.add("hidden");
+    uploadDropzone.classList.remove("hidden");
+    uploadStatus.textContent = "";
+  });
+
+  // File drag & drop
+  uploadDropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadDropzone.classList.add("border-outline", "bg-muted");
+  });
+
+  uploadDropzone.addEventListener("dragleave", () => {
+    uploadDropzone.classList.remove("border-outline", "bg-muted");
+  });
+
+  uploadDropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadDropzone.classList.remove("border-outline", "bg-muted");
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      processImageFile(files[0]);
+    }
+  });
+
+  uploadFileInput.addEventListener("change", () => {
+    const files = uploadFileInput.files;
+    if (files && files.length > 0) {
+      processImageFile(files[0]);
+    }
+  });
+
+  // Clipboard paste listener
+  document.addEventListener("paste", (e) => {
+    if (activeTab !== "scan") return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) {
+          processImageFile(file);
+          break;
+        }
+      }
+    }
+  });
 
   // Copy result text
   btnCopyResult.addEventListener("click", () => {
