@@ -295,11 +295,12 @@ const page = pages.find((p) => p.slug === "qr-code")!;
 </BaseLayout>
 
 <script>
-  import { loadQRCodeGenerator, loadJSQR } from "../utils/qr/loader";
-  import { decodeQRCode, invertImageData } from "../utils/qr/decoder";
+  import { renderQRCode, downloadQRCode } from "../utils/qr/generator";
+  import { CameraScanner } from "../utils/qr/camera";
+  import { drawImageToCanvas, invertCanvasPixels, scanCanvasQR } from "../utils/qr/image";
   import { setButtonDisabled } from "../utils/dom";
 
-  // Navigation
+  // Tabs & Panels
   const tabGenerate = document.getElementById("tab-generate")!;
   const tabScan = document.getElementById("tab-scan")!;
   const workspaceGenerate = document.getElementById("workspace-generate")!;
@@ -319,7 +320,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   const scannerCameraPanel = document.getElementById("scanner-camera-panel")!;
   const scannerUploadPanel = document.getElementById("scanner-upload-panel")!;
 
-  // Camera Scanner Elements
+  // Camera Elements
   const btnStartScanner = document.getElementById("btn-start-scanner")!;
   const btnStopScanner = document.getElementById("btn-stop-scanner")!;
   const btnRetryScanner = document.getElementById("btn-retry-scanner")!;
@@ -330,7 +331,7 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   const scannerError = document.getElementById("scanner-error")!;
   const scannerLoading = document.getElementById("scanner-loading")!;
 
-  // Upload Scanner Elements
+  // Upload Elements
   const uploadDropzone = document.getElementById("upload-dropzone")!;
   const uploadFileInput = document.getElementById("upload-file-input") as HTMLInputElement;
   const uploadPreviewWrapper = document.getElementById("upload-preview-wrapper")!;
@@ -348,19 +349,16 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   const btnCopyResult = document.getElementById("btn-copy-result")!;
   const linkOpenResult = document.getElementById("link-open-result") as HTMLAnchorElement;
 
-  // Active Scanner Streams
-  let stream: MediaStream | null = null;
-  let animFrameId: number | null = null;
+  const cameraScanner = new CameraScanner(scannerVideo, scannerCanvas);
   let activeTab: "generate" | "scan" = "generate";
-  let scannerMode: "camera" | "upload" = "camera";
 
   // Tab switching
   tabGenerate.addEventListener("click", () => {
     if (activeTab === "generate") return;
     activeTab = "generate";
-    stopScanner();
+    cameraScanner.stop();
+    updateCameraUI(false);
 
-    // Toggle Tab style
     tabGenerate.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
     tabScan.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
 
@@ -372,7 +370,6 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     if (activeTab === "scan") return;
     activeTab = "scan";
 
-    // Toggle Tab style
     tabScan.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50 shadow-xs";
     tabGenerate.className = "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 h-9 px-6 text-sm hover:bg-muted hover:text-foreground focus-visible:ring-outline/50 text-muted-foreground";
 
@@ -380,17 +377,16 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     workspaceScan.classList.remove("hidden");
   });
 
-  // Scanner Sub-mode Switching (Camera vs Upload)
+  // Scanner Sub-mode Switching
   function switchScannerMode(mode: "camera" | "upload") {
-    scannerMode = mode;
-
     if (mode === "camera") {
       btnModeCamera.className = "px-3 py-1 font-semibold rounded-md transition-all bg-foreground text-background shadow-xs cursor-pointer";
       btnModeUpload.className = "px-3 py-1 font-semibold rounded-md transition-all text-muted-foreground hover:text-foreground cursor-pointer";
       scannerCameraPanel.classList.remove("hidden");
       scannerUploadPanel.classList.add("hidden");
     } else {
-      stopScanner();
+      cameraScanner.stop();
+      updateCameraUI(false);
       btnModeUpload.className = "px-3 py-1 font-semibold rounded-md transition-all bg-foreground text-background shadow-xs cursor-pointer";
       btnModeCamera.className = "px-3 py-1 font-semibold rounded-md transition-all text-muted-foreground hover:text-foreground cursor-pointer";
       scannerUploadPanel.classList.remove("hidden");
@@ -402,24 +398,13 @@ const page = pages.find((p) => p.slug === "qr-code")!;
   btnModeUpload.addEventListener("click", () => switchScannerMode("upload"));
   btnErrorToUpload.addEventListener("click", () => switchScannerMode("upload"));
 
-  // ==================== GENERATOR LOGIC ====================
-  let qrcodeLib: any = null;
-
-  async function generateQR() {
+  // ==================== GENERATOR ====================
+  async function handleGenerate() {
     const value = qrInput.value.trim();
     if (!value) {
       qrPlaceholder.classList.remove("hidden");
       setButtonDisabled(btnDownloadQr, true);
       return;
-    }
-
-    if (!qrcodeLib) {
-      try {
-        qrcodeLib = await loadQRCodeGenerator();
-      } catch (err) {
-        console.error("Failed to load QR generator library:", err);
-        return;
-      }
     }
 
     qrPlaceholder.classList.add("hidden");
@@ -434,139 +419,67 @@ const page = pages.find((p) => p.slug === "qr-code")!;
       qrContainer.classList.add("bg-white");
     }
 
-    // Render code on canvas
-    qrcodeLib.toCanvas(qrCanvas, value, {
-      width: 256,
-      margin: 1.5,
-      color: {
-        dark: isInverted ? "#fafafa" : "#000000",
-        light: isInverted ? "#09090b" : "#ffffff"
-      }
-    }, (err: any) => {
-      if (err) console.error("Error rendering QR canvas:", err);
-    });
+    await renderQRCode(qrCanvas, value, isInverted);
   }
 
-  // Bind input and invert toggle
-  qrInput.addEventListener("input", generateQR);
-  invertQrToggle.addEventListener("change", generateQR);
+  qrInput.addEventListener("input", handleGenerate);
+  invertQrToggle.addEventListener("change", handleGenerate);
+  btnDownloadQr.addEventListener("click", () => downloadQRCode(qrCanvas));
 
-  // Download QR code
-  btnDownloadQr.addEventListener("click", () => {
-    const dataUrl = qrCanvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.download = "qrcode.png";
-    link.href = dataUrl;
-    link.click();
-  });
-
-  // ==================== SCANNER LOGIC ====================
-  let jsQRDec: any = null;
-
-  async function ensureJSQR(): Promise<any> {
-    if (!jsQRDec) {
-      jsQRDec = await loadJSQR();
+  // ==================== CAMERA SCANNER ====================
+  function updateCameraUI(active: boolean) {
+    if (active) {
+      scannerLoading.classList.add("hidden");
+      scannerVideo.classList.remove("hidden");
+      btnStopScanner.classList.remove("hidden");
+    } else {
+      scannerVideo.classList.add("hidden");
+      btnStopScanner.classList.add("hidden");
+      scannerPrompt.classList.remove("hidden");
     }
-    return jsQRDec;
   }
 
-  async function startScanner() {
+  async function startCamera() {
     scannerPrompt.classList.add("hidden");
     scannerError.classList.add("hidden");
     scannerLoading.classList.remove("hidden");
     scanResultContent.classList.add("hidden");
     scanResultEmpty.classList.remove("hidden");
 
-    try {
-      await ensureJSQR();
+    await cameraScanner.start(
+      (text) => {
+        handleScanResult(text);
+        updateCameraUI(false);
+      },
+      (err) => {
+        console.error("Camera access failed:", err);
+        scannerLoading.classList.add("hidden");
+        scannerVideo.classList.add("hidden");
+        btnStopScanner.classList.add("hidden");
+        scannerError.classList.remove("hidden");
+      },
+    );
 
-      // Request permissions
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-
-      scannerLoading.classList.add("hidden");
-      scannerVideo.classList.remove("hidden");
-      btnStopScanner.classList.remove("hidden");
-
-      scannerVideo.srcObject = stream;
-      scannerVideo.setAttribute("playsinline", "true");
-      scannerVideo.play();
-      animFrameId = requestAnimationFrame(scanTick);
-    } catch (err) {
-      console.error("Camera access failed:", err);
-      scannerLoading.classList.add("hidden");
-      scannerVideo.classList.add("hidden");
-      btnStopScanner.classList.add("hidden");
-      scannerError.classList.remove("hidden");
+    if (cameraScanner.isActive()) {
+      updateCameraUI(true);
     }
   }
 
-  function scanTick() {
-    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
-      const ctx = scannerCanvas.getContext("2d")!;
-      scannerCanvas.width = scannerVideo.videoWidth;
-      scannerCanvas.height = scannerVideo.videoHeight;
-      ctx.drawImage(scannerVideo, 0, 0, scannerCanvas.width, scannerCanvas.height);
+  btnStartScanner.addEventListener("click", startCamera);
+  btnRetryScanner.addEventListener("click", startCamera);
+  btnStopScanner.addEventListener("click", () => {
+    cameraScanner.stop();
+    updateCameraUI(false);
+  });
 
-      const imgData = ctx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-      const code = decodeQRCode(jsQRDec, imgData);
-
-      if (code && code.data) {
-        handleScanResult(code.data);
-        stopScanner();
-        return;
-      }
-    }
-    animFrameId = requestAnimationFrame(scanTick);
-  }
-
-  function handleScanResult(text: string) {
-    resultText.textContent = text;
-    scanResultEmpty.classList.add("hidden");
-    scanResultContent.classList.remove("hidden");
-
-    // Enable link opening if valid URL
-    const isUrl = /^https?:\/\//i.test(text.trim());
-    if (isUrl) {
-      linkOpenResult.href = text.trim();
-      linkOpenResult.classList.remove("hidden");
-    } else {
-      linkOpenResult.classList.add("hidden");
-    }
-  }
-
-  function stopScanner() {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      stream = null;
-    }
-    if (animFrameId) {
-      cancelAnimationFrame(animFrameId);
-      animFrameId = null;
-    }
-
-    scannerVideo.classList.add("hidden");
-    btnStopScanner.classList.add("hidden");
-    scannerPrompt.classList.remove("hidden");
-  }
-
-  // ==================== IMAGE UPLOAD SCANNER LOGIC ====================
+  // ==================== IMAGE UPLOAD SCANNER ====================
   async function processImageFile(file: File) {
     if (!file.type.startsWith("image/")) {
       alert("Please select a valid image file.");
       return;
     }
 
-    try {
-      await ensureJSQR();
-    } catch (err) {
-      console.error("Failed to load jsQR:", err);
-      return;
-    }
-
     switchScannerMode("upload");
-
     uploadDropzone.classList.add("hidden");
     uploadPreviewWrapper.classList.remove("hidden");
     uploadLoading.classList.remove("hidden");
@@ -576,71 +489,44 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     reader.onload = (e) => {
       const src = e.target?.result as string;
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         uploadPreviewImg.src = src;
-        decodeImageElement(img);
+        drawImageToCanvas(img, uploadCanvas);
+        const text = await scanCanvasQR(uploadCanvas);
+        uploadLoading.classList.add("hidden");
+        if (text) {
+          handleScanResult(text);
+          uploadStatus.textContent = "QR code decoded successfully.";
+          uploadStatus.className = "text-xs text-foreground";
+        } else {
+          uploadStatus.textContent = "No QR code detected. Try inverting colors or using a clearer image.";
+          uploadStatus.className = "text-xs text-error";
+        }
       };
       img.src = src;
     };
     reader.readAsDataURL(file);
   }
 
-  function decodeImageElement(img: HTMLImageElement) {
-    uploadLoading.classList.remove("hidden");
-
-    setTimeout(() => {
-      const ctx = uploadCanvas.getContext("2d", { willReadFrequently: true })!;
-      uploadCanvas.width = img.naturalWidth || img.width;
-      uploadCanvas.height = img.naturalHeight || img.height;
-      ctx.drawImage(img, 0, 0);
-
-      const imgData = ctx.getImageData(0, 0, uploadCanvas.width, uploadCanvas.height);
-      const code = decodeQRCode(jsQRDec, imgData);
-
-      uploadLoading.classList.add("hidden");
-
-      if (code && code.data) {
-        handleScanResult(code.data);
-        uploadStatus.textContent = "QR code decoded successfully.";
-        uploadStatus.className = "text-xs text-foreground";
-      } else {
-        uploadStatus.textContent = "No QR code detected. Try inverting colors or using a clearer image.";
-        uploadStatus.className = "text-xs text-error";
-      }
-    }, 50);
-  }
-
-  // Invert colors of uploaded image
-  btnUploadInvert.addEventListener("click", () => {
+  btnUploadInvert.addEventListener("click", async () => {
     if (!uploadCanvas.width || !uploadCanvas.height) return;
-
     uploadLoading.classList.remove("hidden");
 
-    setTimeout(() => {
-      const ctx = uploadCanvas.getContext("2d", { willReadFrequently: true })!;
-      const imgData = ctx.getImageData(0, 0, uploadCanvas.width, uploadCanvas.height);
-      const invertedPixels = invertImageData(imgData.data);
-      const newImgData = ctx.createImageData(uploadCanvas.width, uploadCanvas.height);
-      newImgData.data.set(invertedPixels);
-      ctx.putImageData(newImgData, 0, 0);
+    const invertedData = invertCanvasPixels(uploadCanvas);
+    uploadPreviewImg.src = uploadCanvas.toDataURL();
+    const text = await scanCanvasQR(uploadCanvas, invertedData);
+    uploadLoading.classList.add("hidden");
 
-      uploadPreviewImg.src = uploadCanvas.toDataURL();
-
-      const code = decodeQRCode(jsQRDec, newImgData);
-      uploadLoading.classList.add("hidden");
-
-      if (code && code.data) {
-        handleScanResult(code.data);
-        uploadStatus.textContent = "QR code decoded successfully.";
-        uploadStatus.className = "text-xs text-foreground";
-      } else {
-        uploadStatus.textContent = "No QR code detected after color inversion.";
-        uploadStatus.className = "text-xs text-error";
-      }
-    }, 50);
+    if (text) {
+      handleScanResult(text);
+      uploadStatus.textContent = "QR code decoded successfully.";
+      uploadStatus.className = "text-xs text-foreground";
+    } else {
+      uploadStatus.textContent = "No QR code detected after color inversion.";
+      uploadStatus.className = "text-xs text-error";
+    }
   });
 
-  // Reset upload view for another file
   btnUploadNew.addEventListener("click", () => {
     uploadFileInput.value = "";
     uploadPreviewImg.src = "";
@@ -649,36 +535,26 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     uploadStatus.textContent = "";
   });
 
-  // File drag & drop
   uploadDropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
     uploadDropzone.classList.add("border-outline", "bg-muted");
   });
-
   uploadDropzone.addEventListener("dragleave", () => {
     uploadDropzone.classList.remove("border-outline", "bg-muted");
   });
-
   uploadDropzone.addEventListener("drop", (e) => {
     e.preventDefault();
     uploadDropzone.classList.remove("border-outline", "bg-muted");
     const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      processImageFile(files[0]);
-    }
+    if (files && files.length > 0) processImageFile(files[0]);
   });
-
   uploadFileInput.addEventListener("change", () => {
     const files = uploadFileInput.files;
-    if (files && files.length > 0) {
-      processImageFile(files[0]);
-    }
+    if (files && files.length > 0) processImageFile(files[0]);
   });
 
-  // Clipboard paste listener
   document.addEventListener("paste", (e) => {
     if (activeTab !== "scan") return;
-
     const items = e.clipboardData?.items;
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
@@ -692,7 +568,21 @@ const page = pages.find((p) => p.slug === "qr-code")!;
     }
   });
 
-  // Copy result text
+  // ==================== RESULTS ====================
+  function handleScanResult(text: string) {
+    resultText.textContent = text;
+    scanResultEmpty.classList.add("hidden");
+    scanResultContent.classList.remove("hidden");
+
+    const isUrl = /^https?:\/\//i.test(text.trim());
+    if (isUrl) {
+      linkOpenResult.href = text.trim();
+      linkOpenResult.classList.remove("hidden");
+    } else {
+      linkOpenResult.classList.add("hidden");
+    }
+  }
+
   btnCopyResult.addEventListener("click", () => {
     navigator.clipboard.writeText(resultText.textContent || "").then(() => {
       const originalText = btnCopyResult.textContent;
@@ -702,8 +592,4 @@ const page = pages.find((p) => p.slug === "qr-code")!;
       }, 1500);
     });
   });
-
-  btnStartScanner.addEventListener("click", startScanner);
-  btnStopScanner.addEventListener("click", stopScanner);
-  btnRetryScanner.addEventListener("click", startScanner);
 </script>
