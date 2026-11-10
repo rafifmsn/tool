@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy": "pnpm build && npx wrangler deploy"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.5",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "katex": "^0.16.9",
-    "vitest": "^2.0.5"
+    "vitest": "^2.0.5",
+    "wrangler": "^4.159.0"
   }
 }
