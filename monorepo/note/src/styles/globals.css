@@ -397,96 +397,71 @@
   animation: slide-up 150ms ease-out;
 }
 
-/* CodeMirror Editor Styling (Shared between index and share pages) */
-#editor-container,
-#share-editor-container,
-#editor-container [class*="editor"],
-#share-editor-container [class*="editor"],
-#editor-container [class*="cm-"],
-#share-editor-container [class*="cm-"] {
+/* CodeMirror Editor Styling (Shared across index, share, and scratch pages) */
+:is(#editor-container, #share-editor-container, #scratch-editor-container),
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="editor"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="cm-"] {
   background-color: var(--card) !important;
   color: var(--foreground) !important;
   font-family: var(--font-mono) !important;
 }
 
-#editor-container [class*="activeLine"],
-#editor-container [class*="active-line"],
-#share-editor-container [class*="activeLine"],
-#share-editor-container [class*="active-line"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="activeLine"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="active-line"] {
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
-#editor-container [class*="activeLineGutter"],
-#share-editor-container [class*="activeLineGutter"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="activeLineGutter"] {
   color: var(--syntax-string) !important;
   background-color: rgba(255, 255, 255, 0.06) !important;
 }
 
-#editor-container [class*="gutter"],
-#editor-container [class*="line-number"],
-#share-editor-container [class*="gutter"],
-#share-editor-container [class*="line-number"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="gutter"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="line-number"] {
   color: var(--muted-foreground) !important;
   background-color: var(--card) !important;
   border-right: 1px solid var(--border) !important;
 }
 
-#editor-container [class*="cursor"],
-#share-editor-container [class*="cursor"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="cursor"] {
   border-left: 2px solid var(--syntax-function) !important;
 }
 
-#editor-container ::selection,
-#editor-container [class*="selectionBackground"],
-#share-editor-container ::selection,
-#share-editor-container [class*="selectionBackground"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) ::selection,
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="selectionBackground"] {
   background-color: var(--accent) !important;
 }
 
-#editor-container [class*="keyword"],
-#editor-container [class*="token-keyword"],
-#share-editor-container [class*="keyword"],
-#share-editor-container [class*="token-keyword"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="keyword"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-keyword"] {
   color: var(--syntax-keyword) !important;
   font-weight: 600 !important;
 }
 
-#editor-container [class*="function"],
-#editor-container [class*="token-function"],
-#editor-container [class*="def"],
-#share-editor-container [class*="function"],
-#share-editor-container [class*="token-function"],
-#share-editor-container [class*="def"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="function"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-function"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="def"] {
   color: var(--syntax-function) !important;
 }
 
-#editor-container [class*="string"],
-#editor-container [class*="token-string"],
-#share-editor-container [class*="string"],
-#share-editor-container [class*="token-string"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="string"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-string"] {
   color: var(--syntax-string) !important;
 }
 
-#editor-container [class*="comment"],
-#editor-container [class*="token-comment"],
-#share-editor-container [class*="comment"],
-#share-editor-container [class*="token-comment"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="comment"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-comment"] {
   color: var(--syntax-comment) !important;
   font-style: italic !important;
 }
 
-#editor-container [class*="variable"],
-#editor-container [class*="token-variable"],
-#editor-container [class*="property"],
-#share-editor-container [class*="variable"],
-#share-editor-container [class*="token-variable"],
-#share-editor-container [class*="property"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="variable"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-variable"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="property"] {
   color: var(--syntax-variable) !important;
 }
 
-#editor-container [class*="number"],
-#editor-container [class*="token-number"],
-#share-editor-container [class*="number"],
-#share-editor-container [class*="token-number"] {
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="number"],
+:is(#editor-container, #share-editor-container, #scratch-editor-container) [class*="token-number"] {
   color: var(--syntax-number) !important;
 }

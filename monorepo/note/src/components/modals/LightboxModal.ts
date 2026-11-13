@@ -30,7 +30,7 @@ export class LightboxModal {
     // Close button
     const closeBtn = document.createElement("button");
     closeBtn.className =
-      "absolute top-4 right-4 icon-btn bg-[var(--color-surface-overlay)] w-8 h-8 rounded-full";
+      "absolute top-4 right-4 icon-btn bg-popover w-8 h-8 rounded-full";
     closeBtn.innerHTML = '<span class="text-sm leading-none">✕</span>';
     closeBtn.setAttribute("aria-label", "Close");
     closeBtn.addEventListener("click", () => this.close());

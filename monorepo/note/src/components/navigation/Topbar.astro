@@ -3,7 +3,7 @@
  * Topbar — app logo, sidebar toggle, preview toggle, export dropdown.
  */
 
-import { Eye, StepBack, FileText, FileCode, Archive, ChevronDown } from "@lucide/astro";
+import { Eye, Columns2, CodeXml, PanelLeftClose, FileText, FileCode, Archive, ChevronDown } from "@lucide/astro";
 
 interface Props {
   subTitle?: string;
@@ -30,7 +30,7 @@ const { subTitle, showSidebarToggle = false, showEditorActions = false } = Astro
           id="sidebar-arrow" 
           class="text-sm leading-none block transition-transform duration-200"
         >
-          <StepBack size={14} />
+          <PanelLeftClose size={14} />
         </span>
       </button>
     )}
@@ -53,10 +53,13 @@ const { subTitle, showSidebarToggle = false, showEditorActions = false } = Astro
         <button
           id="btn-toggle-preview"
           class="icon-btn-2 w-7! h-7! hidden"
+          data-view-mode="split"
           aria-label="Toggle preview"
           title="Toggle preview"
         >
-          <Eye size={14} />
+          <span class="view-icon" data-mode="split"><Columns2 size={14} /></span>
+          <span class="view-icon" data-mode="editor"><CodeXml size={14} /></span>
+          <span class="view-icon" data-mode="preview"><Eye size={14} /></span>
         </button>
  
         <div class="relative hidden" id="export-container">
@@ -178,3 +181,14 @@ document.getElementById('btn-toggle-preview')?.addEventListener('click', () => {
   document.dispatchEvent(new CustomEvent('toggle-preview'));
 });
 </script>
+
+<style>
+  #btn-toggle-preview .view-icon {
+    display: none;
+  }
+  #btn-toggle-preview[data-view-mode="split"] .view-icon[data-mode="split"],
+  #btn-toggle-preview[data-view-mode="editor"] .view-icon[data-mode="editor"],
+  #btn-toggle-preview[data-view-mode="preview"] .view-icon[data-mode="preview"] {
+    display: inline-flex;
+  }
+</style>

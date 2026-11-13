@@ -29,31 +29,32 @@ export class Editor {
           "&": {
             fontSize: "13px",
             height: "100%",
-            backgroundColor: "var(--color-editor-bg)",
+            backgroundColor: "var(--card)",
+            color: "var(--foreground)",
           },
           ".cm-scroller": {
-            fontFamily:
-              "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
+            fontFamily: "var(--font-mono)",
           },
           ".cm-gutters": {
-            backgroundColor: "var(--color-editor-bg)",
-            borderRight: "1px solid var(--color-editor-border)",
-            color: "var(--color-line-number)",
+            backgroundColor: "var(--card)",
+            borderRight: "1px solid var(--border)",
+            color: "var(--muted-foreground)",
           },
           ".cm-activeLineGutter": {
-            backgroundColor: "var(--color-surface-raised)",
+            backgroundColor: "rgba(255, 255, 255, 0.06)",
+            color: "var(--syntax-string)",
           },
           ".cm-activeLine": {
-            backgroundColor: "var(--color-surface-raised)",
+            backgroundColor: "rgba(255, 255, 255, 0.04)",
           },
           ".cm-cursor": {
-            borderLeftColor: "var(--color-text-primary)",
+            borderLeftColor: "var(--syntax-function)",
           },
           ".cm-selectionBackground": {
-            backgroundColor: "var(--color-selection) !important",
+            backgroundColor: "var(--accent) !important",
           },
           ".cm-content": {
-            caretColor: "var(--color-text-primary)",
+            caretColor: "var(--foreground)",
           },
         }),
         EditorView.updateListener.of((update) => {

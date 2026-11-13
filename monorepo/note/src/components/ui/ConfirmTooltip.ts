@@ -36,16 +36,16 @@ export class ConfirmTooltip {
 
     this.tooltipEl = document.createElement("div");
     this.tooltipEl.className =
-      "slide-up absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg";
+      "slide-up absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex items-center gap-2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg";
     this.tooltipEl.setAttribute("role", "tooltip");
 
     const msg = document.createElement("span");
-    msg.className = "text-[var(--color-text-secondary)]";
+    msg.className = "text-muted-foreground";
     msg.textContent = this.options.message;
 
     const confirmBtn = document.createElement("button");
     confirmBtn.className =
-      "rounded px-1.5 py-0.5 font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-subtle)] transition-colors";
+      "rounded px-1.5 py-0.5 font-medium text-error hover:bg-error/10 transition-colors cursor-pointer";
     confirmBtn.textContent = this.options.confirmLabel;
     confirmBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -55,7 +55,7 @@ export class ConfirmTooltip {
 
     const cancelBtn = document.createElement("button");
     cancelBtn.className =
-      "rounded px-1.5 py-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)] transition-colors";
+      "rounded px-1.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer";
     cancelBtn.textContent = this.options.cancelLabel;
     cancelBtn.addEventListener("click", (e) => {
       e.stopPropagation();
