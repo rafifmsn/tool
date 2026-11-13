@@ -162,7 +162,7 @@
     padding: 16px 8px !important;
     margin: 1.5em 0 !important;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-text-muted, #52525b) transparent;
+    scrollbar-color: var(--muted-foreground) transparent;
     text-align: center !important;
   }
 
@@ -188,7 +188,7 @@
   }
 
   .preview-side .katex-display::-webkit-scrollbar-thumb {
-    background-color: var(--color-text-muted, #52525b);
+    background-color: var(--muted-foreground);
     border-radius: 4px;
   }
 </style>
@@ -206,7 +206,8 @@
   let preview: Preview | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  let isPreviewVisible = true;
+  type ViewMode = "split" | "editor" | "preview";
+  let viewMode: ViewMode = "split";
   const SPLIT_KEY = "note-editor-split";
 
   let countMode: "char" | "token" = "char";
@@ -329,57 +330,42 @@
     if (!editorContainer || !previewContainer || !handle) return;
 
     const isMobile = window.innerWidth < 768;
+    const effectiveMode: ViewMode =
+      isMobile && viewMode === "split" ? "editor" : viewMode;
 
-    if (isMobile) {
-      if (!isPreviewVisible) {
-        editorContainer.style.setProperty("width", "100%", "important");
-        editorContainer.style.setProperty("border-right", "none", "important");
-        editorContainer.style.removeProperty("visibility");
-        editorContainer.style.removeProperty("display");
-
-        previewContainer.style.setProperty("display", "none", "important");
-        previewContainer.style.setProperty("width", "0px", "important");
-        handle.style.setProperty("display", "none", "important");
-        if (btn) btn.style.opacity = "0.4";
-      } else {
-        editorContainer.style.setProperty("width", "0px", "important");
-        editorContainer.style.setProperty("border-right", "none", "important");
-        editorContainer.style.setProperty("visibility", "hidden", "important");
-
-        previewContainer.style.setProperty("display", "block", "important");
-        previewContainer.style.setProperty("width", "100%", "important");
-        handle.style.setProperty("display", "none", "important");
-        if (btn) btn.style.opacity = "1";
-      }
-    } else {
+    if (effectiveMode === "editor") {
       editorContainer.style.removeProperty("display");
-      editorContainer.style.removeProperty("visibility");
-      previewContainer.style.removeProperty("display");
+      editorContainer.style.setProperty("width", "100%", "important");
+      editorContainer.style.setProperty("border-right", "none", "important");
 
-      if (!isPreviewVisible) {
-        editorContainer.style.setProperty("width", "100%", "important");
-        editorContainer.style.setProperty("border-right", "none", "important");
-        previewContainer.style.setProperty("display", "none", "important");
-        handle.style.setProperty("display", "none", "important");
-        if (btn) btn.style.opacity = "0.4";
-      } else {
-        const saved = localStorage.getItem(SPLIT_KEY);
-        const ratio = saved ? saved + "%" : "50%";
+      previewContainer.style.setProperty("display", "none", "important");
+      previewContainer.style.setProperty("width", "0px", "important");
+      handle.style.setProperty("display", "none", "important");
+    } else if (effectiveMode === "preview") {
+      editorContainer.style.setProperty("display", "none", "important");
+      editorContainer.style.setProperty("width", "0px", "important");
+      editorContainer.style.setProperty("border-right", "none", "important");
 
-        document.documentElement.style.setProperty("--editor-ratio", ratio);
-        editorContainer.style.width = ratio;
-        previewContainer.style.width = `calc(100% - ${ratio} - 4px)`;
+      previewContainer.style.setProperty("display", "block", "important");
+      previewContainer.style.setProperty("width", "100%", "important");
+      handle.style.setProperty("display", "none", "important");
+    } else {
+      const saved = localStorage.getItem(SPLIT_KEY);
+      const ratio = saved ? saved + "%" : "50%";
 
-        editorContainer.style.removeProperty("border-right");
-        previewContainer.style.setProperty("display", "block", "important");
-        handle.style.display = "";
-        if (btn) btn.style.opacity = "1";
-      }
+      document.documentElement.style.setProperty("--editor-ratio", ratio);
+      editorContainer.style.removeProperty("display");
+      editorContainer.style.removeProperty("border-right");
+      editorContainer.style.width = ratio;
+
+      previewContainer.style.setProperty("display", "block", "important");
+      previewContainer.style.width = `calc(100% - ${ratio} - 4px)`;
+      handle.style.display = "";
     }
 
-    setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 50);
+    if (btn) {
+      btn.dataset.viewMode = effectiveMode;
+    }
   }
 
   function restoreSplitRatio() {
@@ -400,7 +386,7 @@
     let isDragging = false;
 
     handle.addEventListener("mousedown", (e) => {
-      if (!isPreviewVisible || window.innerWidth < 768) return;
+      if (viewMode !== "split" || window.innerWidth < 768) return;
       isDragging = true;
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
@@ -408,7 +394,7 @@
     });
 
     document.addEventListener("mousemove", (e) => {
-      if (!isDragging || !isPreviewVisible || window.innerWidth < 768) return;
+      if (!isDragging || viewMode !== "split" || window.innerWidth < 768) return;
       const rect = panel.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const pct = Math.max(20, Math.min(80, (x / rect.width) * 100));
@@ -469,19 +455,29 @@
     editor = new Editor(editorContainer, "");
 
     if (window.innerWidth < 768) {
-      isPreviewVisible = false;
+      viewMode = "editor";
     }
 
     restoreSplitRatio();
     setupResize();
 
-    const toggleBtn = document.getElementById("btn-toggle-preview");
-    toggleBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      isPreviewVisible = !isPreviewVisible;
+    document.addEventListener("toggle-preview", () => {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        const current = viewMode === "split" ? "editor" : viewMode;
+        viewMode = current === "editor" ? "preview" : "editor";
+      } else {
+        viewMode =
+          viewMode === "split"
+            ? "editor"
+            : viewMode === "editor"
+              ? "preview"
+              : "split";
+      }
+
       updateLayoutWidths();
 
-      if (isPreviewVisible && preview && currentContent) {
+      if (viewMode !== "editor" && preview && currentContent) {
         preview.update(currentContent);
       }
     });

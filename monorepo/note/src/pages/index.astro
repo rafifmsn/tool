@@ -62,17 +62,6 @@ import EditorPanel from '../components/editor/EditorPanel.astro';
   #pdf-viewer.active ~ #editor-wrapper {
     display: none;
   }
-
-  #editor-wrapper.preview-hidden #preview-container,
-  #editor-wrapper.preview-hidden #resize-handle {
-    display: none !important;
-  }
-
-  #editor-wrapper.preview-hidden #editor-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    border-right: none !important;
-  }
 </style>
 
 <script>
@@ -99,38 +88,6 @@ document.addEventListener('toggle-sidebar', () => {
 document.addEventListener('toggle-sidebar', () => {
   sidebarVisible = !sidebarVisible;
   applySidebar();
-});
-
-// ── Preview toggle ──
-let previewVisible = true;
-
-function applyPreview() {
-  const wrapper = document.getElementById('editor-wrapper');
-  const btn = document.getElementById('btn-toggle-preview');
-  if (!wrapper || !btn) return;
-  
-  wrapper.classList.toggle('preview-hidden', !previewVisible);
-  btn.style.opacity = previewVisible ? '1' : '0.25';
-
-  const editorContainer = document.getElementById('editor-container');
-  const previewContainer = document.getElementById('preview-container');
-  if (previewVisible && editorContainer && previewContainer) {
-    editorContainer.style.removeProperty('width');
-    editorContainer.style.removeProperty('border-right');
-    previewContainer.style.removeProperty('width');
-    
-    const saved = localStorage.getItem('note-editor-split');
-    const ratio = saved ? saved + '%' : '50%';
-    document.documentElement.style.setProperty('--editor-ratio', ratio);
-    editorContainer.style.width = ratio;
-    previewContainer.style.width = `calc(100% - ${ratio} - 4px)`;
-  }
-}
-applyPreview();
-
-document.addEventListener('toggle-preview', () => {
-  previewVisible = !previewVisible;
-  applyPreview();
 });
 
 // ── File selection state ──

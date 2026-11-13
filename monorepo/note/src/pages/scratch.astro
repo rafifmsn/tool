@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Topbar from "../components/navigation/Topbar.astro";
+import { Trash2, Download } from "@lucide/astro";
+---
+
+<BaseLayout
+  title="Scratch - Rafif Muchsin"
+  description="Single-session quick markdown scratchpad."
+>
+  <body class="h-full w-full overflow-hidden bg-background">
+    <div id="app-root" class="flex flex-col h-full w-full overflow-hidden">
+      <Topbar subTitle="Scratch">
+        <button
+          id="btn-clear-scratch"
+          class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium text-error border border-error/30 hover:bg-error/10 transition-colors cursor-pointer"
+          title="Clear scratchpad"
+        >
+          <Trash2 size={12} />
+          <span>Clear</span>
+        </button>
+        <button
+          id="btn-download-scratch"
+          class="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer"
+          title="Download as Markdown"
+        >
+          <Download size={12} />
+          <span>Download</span>
+        </button>
+      </Topbar>
+
+      <main class="flex-1 min-h-0 overflow-hidden">
+        <div id="scratch-editor-container" class="h-full w-full overflow-hidden"></div>
+      </main>
+    </div>
+  </body>
+</BaseLayout>
+
+<style is:global>
+  #scratch-editor-container {
+    height: 100%;
+  }
+  #scratch-editor-container .cm-editor {
+    height: 100%;
+  }
+  #scratch-editor-container .cm-scroller {
+    overflow: auto;
+  }
+</style>
+
+<script>
+  import { saveAs } from "file-saver";
+  import { Editor } from "../utils/editor";
+
+  const STORAGE_KEY = "note-scratch-content";
+  const container = document.getElementById("scratch-editor-container");
+
+  if (container) {
+    const initial = localStorage.getItem(STORAGE_KEY) ?? "";
+    const editor = new Editor(container, initial);
+    editor.focus();
+
+    editor.setOnChange((content) => {
+      localStorage.setItem(STORAGE_KEY, content);
+    });
+
+    document
+      .getElementById("btn-clear-scratch")
+      ?.addEventListener("click", () => {
+        editor.setContent("");
+        localStorage.removeItem(STORAGE_KEY);
+        editor.focus();
+      });
+
+    document
+      .getElementById("btn-download-scratch")
+      ?.addEventListener("click", () => {
+        const blob = new Blob([editor.getContent()], {
+          type: "text/markdown;charset=utf-8",
+        });
+        saveAs(blob, "scratch.md");
+      });
+  }
+</script>

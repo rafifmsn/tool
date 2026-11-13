@@ -55,6 +55,14 @@ import {
       <span>Kanban</span>
     </button>
     <button
+      id="sidebar-scratch-btn"
+      class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer"
+      title="Quick scratchpad"
+    >
+      <SquarePen size={12} />
+      <span>Scratch</span>
+    </button>
+    <button
       id="sidebar-more-tools-btn"
       class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors cursor-pointer"
       title="More tools"
@@ -103,7 +111,7 @@ import {
     </button>
     <button
       id="sidebar-delete-all-btn"
-      class="flex items-center justify-center gap-1.5 h-7 w-full rounded-md text-xs font-medium text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors cursor-pointer"
+      class="flex items-center justify-center gap-1.5 h-7 w-full rounded-md text-xs font-medium text-error border border-error/30 hover:bg-error/10 transition-colors cursor-pointer"
       title="Delete all files and assets in current tab"
     >
       <Trash2 size={14} />
@@ -175,6 +183,12 @@ import {
     .getElementById("sidebar-tasks-btn")
     ?.addEventListener("click", () => {
       location.href = "/tasks";
+    });
+
+  document
+    .getElementById("sidebar-scratch-btn")
+    ?.addEventListener("click", () => {
+      location.href = "/scratch";
     });
 
   document
