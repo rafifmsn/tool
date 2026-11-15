@@ -46,14 +46,14 @@ While both the creation dashboard and the resolver engine apply sanitization rul
 | ---------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **External Websites Trying to Steal Data**           | **Protected** (via Browser SOP)               | The browser's Same-Origin Policy (SOP) completely locks down your IndexedDB store. `evil.com` cannot view or query your application's data.                                                                                                               |
 | **Offline IndexedDB Dump / Bundle Inspection**       | **Protected** (via Web Crypto Non-Extractable) | No static encryption key exists in the source bundle, and the `CryptoKey` stored in IndexedDB cannot be exported as raw bytes via JavaScript.                                                                                                             |
-| **Active Cross-Site Scripting (XSS) Data Theft**     | **Mitigated** (via Cloudflare CSP)            | If an attacker gains script execution inside your origin, they can still invoke `crypto.subtle.decrypt()` using the IndexedDB key handle or read the token from memory. However, strict CSP `connect-src` rules block exfiltrating it to external servers. |
+| **Active Cross-Site Scripting (XSS) Data Theft**     | **Mitigated** (via CSP)                       | If an attacker gains script execution inside your origin, they can still invoke `crypto.subtle.decrypt()` using the IndexedDB key handle or read the token from memory. However, strict CSP `connect-src` rules block exfiltrating it to external servers. |
 | **Physical Theft of Device / Unlocked Workstations** | **Not Protected** (OS Dependent)              | If an unauthorized individual accesses your physical machine, they can use browser inspection interfaces to interact with local memory variables or the active origin.                                                                                     |
 
 **Security Tips:**
-- **Serve over HTTPS:** Web Crypto (`crypto.subtle`) requires a secure context (`https://` or `http://localhost`), so self-hosted deployments must terminate TLS (for example via Caddy or Cloudflare Tunnel).
-- **Verify CSP headers:** Cloudflare Pages reads `public/_headers`, and the Docker image applies the same headers in `nginx.conf`. Other static hosts may need manual header rules.
-- **Scope your PAT:** Use a Fine-Grained Personal Access Token limited to `Contents` read/write on your links repository only.
-- **Protect dashboard access:** Put the dashboard behind Cloudflare Zero Trust or an identity proxy if you need access control, since all token logic runs client-side.
+- Web Crypto (`crypto.subtle`) requires a secure context (`https://` or `http://localhost`), so self-hosted deployments must terminate TLS (for example via Caddy or Cloudflare Tunnel).
+- Cloudflare Pages reads `public/_headers`, and the Docker image applies the same headers in `nginx.conf`; other static hosts may need manual header rules.
+- Use a Fine-Grained Personal Access Token limited to `Contents` read/write on your links repository only.
+- Put the dashboard behind Cloudflare Zero Trust or an identity proxy if you need access control, since all token logic runs client-side.
 
 ## Data Structure
 
