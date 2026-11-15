@@ -21,41 +21,39 @@ When someone clicks a link, the `404.astro` script executes this logic in order:
 3. **Priority 3 (The Default):** Is it just `domain.com/ID`? If yes, it checks `domains.json` for the entry marked `"default": true`.
 4. **Fallback:** If all the above fail (or the file doesn't exist on GitHub), the system waits 5 seconds and redirects the user to the home page.
 
-## Privacy, Obfuscation & Security Scope
+## Privacy, Encryption & Security Scope
 
 This project is built on a "Local-First" architecture. Because there is no external database or specialized authentication server, understanding your security boundaries is vital to keeping your environment safe.
 
 ### GitHub Token Protection
 
-Your GitHub Personal Access Token (PAT) is the key to your "database." To protect it from casual exposure, we implement a **Symmetric XOR Obfuscation** layer:
+Your GitHub Personal Access Token (PAT) is the key to your "database." To avoid storing it in plaintext or relying on a hardcoded key in the bundle, we encrypt it using the browser's **Web Crypto API (`AES-GCM` 256-bit)** with a **non-extractable `CryptoKey`**:
 
-- **Static Key Obfuscation:** The script uses an internal `OBS_KEY` constant which serves as the "password" for both the encryption and decryption processes.
-- **XOR Operation:** This is a bitwise operation where each character of your token is shifted against a corresponding character in the key. It is computationally inexpensive and perfectly reversible.
-- **Base64 Wrapper:** After the XOR shift, the resulting string is wrapped in `btoa()` (Base64). This ensures the scrambled data is stored as a stable ASCII string safe to persist in the browser (we store it encrypted in IndexedDB).
-- **Deterministic Flow:** This process is strictly deterministic—the same token always produces the same encrypted string, allowing for seamless retrieval without a backend.
+- **Non-Extractable Key:** The browser generates a per-origin `AES-GCM` key with `extractable: false` and stores the `CryptoKey` handle in IndexedDB. JavaScript can use the key to encrypt and decrypt, but cannot export the raw key bytes.
+- **Randomized IV:** Each save generates a fresh 12-byte initialization vector (`crypto.getRandomValues`), storing `{ iv, ciphertext }` in IndexedDB.
 
 **Logic Flow:**
 
-- **Storage:** `Token` + `Static Key` → `XOR Bitshift` → `Base64 Encode` → `IndexedDB` (encrypted).
-- **Retrieval:** `IndexedDB` → `Base64 Decode` → `XOR Bitshift` (with same Key) → `Original Token`.
-- **Clearing Saved Token:** To remove a previously saved token from the browser, use the trash icon next to the Token field in the dashboard — this clears the stored token from IndexedDB.
+- **Storage:** `Token` + `Non-Extractable CryptoKey` + `Random IV` -> `AES-GCM Encrypt` -> `IndexedDB`.
+- **Retrieval:** `IndexedDB` (`{ iv, ciphertext }` + `CryptoKey`) -> `AES-GCM Decrypt` -> `Original Token`.
+- **Clearing Saved Token:** To remove a previously saved token from the browser, use the trash icon next to the Token field in the dashboard: this deletes both the encrypted payload and the `CryptoKey` from IndexedDB.
 
 ### Security Boundaries
 
 While both the creation dashboard and the resolver engine apply sanitization rules to block persistent Cross-Site Scripting (XSS) and path-traversal inputs, you must understand what this client-side crypto approach actually defends against:
 
-| Threat Vector                                        | Security Layer / Status                   | What It Actually Means                                                                                                                                                                                                                                                                                       |
-| ---------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **External Websites Trying to Steal Data**           | **Protected** (via Browser SOP)           | The browser's Same-Origin Policy (SOP) completely locks down your IndexedDB file. `evil.com` cannot view or query your application's data.                                                                                                                                                                   |
-| **Malicious Browser Extensions / Shoulder Surfing**  | **Protected** (via XOR Obfuscation)       | Hides the structural `ghp_` prefix signature from extension scrapers and masks your plain text token if someone looks over your shoulder at your DevTools panel.                                                                                                                                             |
-| **Active Cross-Site Scripting (XSS) Data Theft**     | **Fully Neutered** (via Cloudflare CSP)\* | **XOR is obfuscation, not high-grade encryption.** If an attacker gains script execution inside your origin, they can read the local key and decrypt the token. However, because our strict CSP headers are active, **the browser will instantly block them from sending that token to an external server.** |
-| **Physical Theft of Device / Unlocked Workstations** | **Not Protected** (OS Dependent)          | If an unauthorized individual accesses your physical machine, they can use browser inspection interfaces to interact with local memory variables.                                                                                                                                                            |
+| Threat Vector                                        | Security Layer / Status                       | What It Actually Means                                                                                                                                                                                                                                   |
+| ---------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **External Websites Trying to Steal Data**           | **Protected** (via Browser SOP)               | The browser's Same-Origin Policy (SOP) completely locks down your IndexedDB store. `evil.com` cannot view or query your application's data.                                                                                                               |
+| **Offline IndexedDB Dump / Bundle Inspection**       | **Protected** (via Web Crypto Non-Extractable) | No static encryption key exists in the source bundle, and the `CryptoKey` stored in IndexedDB cannot be exported as raw bytes via JavaScript.                                                                                                             |
+| **Active Cross-Site Scripting (XSS) Data Theft**     | **Mitigated** (via Cloudflare CSP)            | If an attacker gains script execution inside your origin, they can still invoke `crypto.subtle.decrypt()` using the IndexedDB key handle or read the token from memory. However, strict CSP `connect-src` rules block exfiltrating it to external servers. |
+| **Physical Theft of Device / Unlocked Workstations** | **Not Protected** (OS Dependent)              | If an unauthorized individual accesses your physical machine, they can use browser inspection interfaces to interact with local memory variables or the active origin.                                                                                     |
 
 **Security Tips:**
-- CSP protection relies on deploying the site to a hosting provider that natively respects and processes the custom `_headers` file configuration (such as Cloudflare Pages).
-- Because this is a serverless, static project, all logic (including token obfuscation and retrieval) executes inside the browser. While the IndexedDB storage is scoped securely via the browser's Same-Origin Policy, it is not a substitute for a true server-side backend database. For high-security enterprise environments, you should implement a traditional server-side (SSR) backend and utilize a centralized server-side database to avoid exposing or storing tokens client-side.
-- Do not use full-access developer accounts. Issue a Fine-Grained Personal Access Token limited exclusively to the specific repository acting as your link database, granting write/read permissions strictly to its file contents.
-- For true enterprise isolation, secure your dashboard interface behind Cloudflare Zero Trust or an equivalent identity provider. This ensures only authorized identities can load the dashboard assets.
+- **Serve over HTTPS:** Web Crypto (`crypto.subtle`) requires a secure context (`https://` or `http://localhost`), so self-hosted deployments must terminate TLS (for example via Caddy or Cloudflare Tunnel).
+- **Verify CSP headers:** Cloudflare Pages reads `public/_headers`, and the Docker image applies the same headers in `nginx.conf`. Other static hosts may need manual header rules.
+- **Scope your PAT:** Use a Fine-Grained Personal Access Token limited to `Contents` read/write on your links repository only.
+- **Protect dashboard access:** Put the dashboard behind Cloudflare Zero Trust or an identity proxy if you need access control, since all token logic runs client-side.
 
 ## Data Structure
 

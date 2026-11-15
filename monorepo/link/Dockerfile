@@ -3,9 +3,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Enable pnpm via corepack
+RUN corepack enable
+
 # Install dependencies first (leverage Docker caching)
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --dangerously-allow-all-builds
 
 # Copy the rest of the application files
 COPY . .
@@ -17,7 +20,7 @@ ENV PUBLIC_BRAND_NAME=$PUBLIC_BRAND_NAME
 ENV PUBLIC_APP_URL=$PUBLIC_APP_URL
 
 # Build the static site
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Serve the static site using Nginx
 FROM nginx:alpine
