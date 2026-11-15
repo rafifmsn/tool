@@ -51,16 +51,11 @@ While both the creation dashboard and the resolver engine apply sanitization rul
 | **Active Cross-Site Scripting (XSS) Data Theft**     | **Fully Neutered** (via Cloudflare CSP)\* | **XOR is obfuscation, not high-grade encryption.** If an attacker gains script execution inside your origin, they can read the local key and decrypt the token. However, because our strict CSP headers are active, **the browser will instantly block them from sending that token to an external server.** |
 | **Physical Theft of Device / Unlocked Workstations** | **Not Protected** (OS Dependent)          | If an unauthorized individual accesses your physical machine, they can use browser inspection interfaces to interact with local memory variables.                                                                                                                                                            |
 
-\* _Note: CSP protection relies on deploying the site to a hosting provider that natively respects and processes the custom `_headers` file configuration (such as Cloudflare Pages)._
-
-> [!NOTE]
-> **Static Client-Side vs. Server-Side Architecture**
-> Because this is a serverless, static project, all logic (including token obfuscation and retrieval) executes inside the browser. While the IndexedDB storage is scoped securely via the browser's Same-Origin Policy, it is not a substitute for a true server-side backend database. For high-security enterprise environments, you should implement a traditional server-side (SSR) backend and utilize a centralized server-side database to avoid exposing or storing tokens client-side.
-
 **Security Tips:**
-
-- **Use Fine-Grained GitHub Tokens:** Do not use full-access developer accounts. Issue a **Fine-Grained Personal Access Token** limited exclusively to the specific repository acting as your link database, granting write/read permissions strictly to its file contents.
-- **Guard Dashboard Access:** For true enterprise isolation, secure your dashboard interface behind **Cloudflare Zero Trust** or an equivalent identity provider. This ensures only authorized identities can load the dashboard assets.
+- CSP protection relies on deploying the site to a hosting provider that natively respects and processes the custom `_headers` file configuration (such as Cloudflare Pages).
+- Because this is a serverless, static project, all logic (including token obfuscation and retrieval) executes inside the browser. While the IndexedDB storage is scoped securely via the browser's Same-Origin Policy, it is not a substitute for a true server-side backend database. For high-security enterprise environments, you should implement a traditional server-side (SSR) backend and utilize a centralized server-side database to avoid exposing or storing tokens client-side.
+- Do not use full-access developer accounts. Issue a Fine-Grained Personal Access Token limited exclusively to the specific repository acting as your link database, granting write/read permissions strictly to its file contents.
+- For true enterprise isolation, secure your dashboard interface behind Cloudflare Zero Trust or an equivalent identity provider. This ensures only authorized identities can load the dashboard assets.
 
 ## Data Structure
 
@@ -111,13 +106,7 @@ Or define it in your shell environment before running:
 PUBLIC_APP_URL="https://links.mybrand.com" docker compose build
 ```
 
-### Analytics
-
-The layout template in `src/layout/Layout.astro` contains a default analytics tracking script (Umami). If you are deploying your own version of this project, you should either remove this script or replace the `src` and `data-website-id` with your own analytics provider details.
-
-Additionally, make sure to update the Content Security Policy (CSP) header in `public/_headers` to whitelist your analytics provider's domains in the `script-src` and `connect-src` directives if they are hosted externally.
-
-**1. Repository Setup**
+### 1. Repository Setup
 
 - Create a public GitHub repository to hold your link data.
 - Configure `public/domains.json` in your Astro project:
@@ -139,7 +128,7 @@ Additionally, make sure to update the Content Security Policy (CSP) header in `p
   ]
   ```
 
-**2. Deployment**
+### 2. Deployment
 
 #### Static Hosting (Cloudflare Pages, Vercel, Netlify, etc.)
 
@@ -153,7 +142,7 @@ Additionally, make sure to update the Content Security Policy (CSP) header in `p
 
 You can self-host this static build or deploy it using Docker. A multi-stage `Dockerfile` and `docker-compose.yml` are provided.
 
-##### 1. Using Docker Compose
+##### Using Docker Compose
 Start the service with:
 ```bash
 docker compose up -d
@@ -163,13 +152,13 @@ By default, the dashboard and resolver will be served on port `8080` (i.e. `http
 PORT=9000 docker compose up -d
 ```
 
-##### 2. Build and Run Manually
+##### Build and Run Manually
 ```bash
 docker build -t link .
 docker run -p 8080:80 link
 ```
 
-**3. Usage**
+### 3. Usage
 
 - Open your deployed dashboard.
 - Enter your PAT and Destination URL.
