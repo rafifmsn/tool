@@ -269,11 +269,14 @@ import {
             <h3 class="text-base font-bold text-foreground mt-6 mb-3">
                 2. Token Privacy &amp; Security
             </h3>
-             <p class="text-muted-foreground text-sm leading-relaxed mb-4">
-                Your GitHub Token is securely hidden locally using a symmetric
-                bitwise layer before committing to the browser sandbox storage.
-                To remove your saved token from local storage completely, you can
-                use the trash clear button directly beside the token input field.
+            <p class="text-muted-foreground text-sm leading-relaxed mb-4">
+                Your GitHub Token is encrypted locally using Web Crypto
+                (<code class="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs border border-border">AES-GCM</code>)
+                with a non-extractable <code class="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs border border-border">CryptoKey</code>
+                and randomized IV before being stored in IndexedDB.
+                To remove your saved token and encryption key from local storage
+                completely, use the trash clear button directly beside the token
+                input field.
             </p>
             <p class="text-muted-foreground text-sm leading-relaxed mb-4">
                 Additionally, a strict Content Security Policy (CSP) has been
@@ -300,6 +303,7 @@ import {
     import {
         cleanGitHubIdentifier,
         validateAndNormalizeUrl,
+        generateEncryptionKey,
         encryptToken,
         decryptToken,
     } from "../utils/security";
@@ -383,17 +387,20 @@ import {
         });
     }
 
-    async function idbGet(key: string): Promise<string | null> {
+    const TOKEN_DATA_KEY = "gh_token";
+    const TOKEN_CRYPTO_KEY = "gh_token_key";
+
+    async function idbGet<T = unknown>(key: string): Promise<T | null> {
         const db = await openDB();
         return new Promise((resolve, reject) => {
             const tx = db.transaction("secrets", "readonly");
             const req = tx.objectStore("secrets").get(key);
-            req.onsuccess = () => resolve(req.result ?? null);
+            req.onsuccess = () => resolve((req.result as T) ?? null);
             req.onerror = () => reject(req.error);
         });
     }
 
-    async function idbSet(key: string, value: string): Promise<void> {
+    async function idbSet(key: string, value: unknown): Promise<void> {
         const db = await openDB();
         return new Promise((resolve, reject) => {
             const tx = db.transaction("secrets", "readwrite");
@@ -401,6 +408,16 @@ import {
             req.onsuccess = () => resolve();
             req.onerror = () => reject(req.error);
         });
+    }
+
+    async function getOrCreateTokenKey(): Promise<CryptoKey> {
+        const existing = await idbGet<CryptoKey>(TOKEN_CRYPTO_KEY);
+        if (existing instanceof CryptoKey) {
+            return existing;
+        }
+        const key = await generateEncryptionKey();
+        await idbSet(TOKEN_CRYPTO_KEY, key);
+        return key;
     }
 
     async function idbDelete(key: string): Promise<void> {
@@ -435,7 +452,10 @@ import {
 
     ui.clearTokenBtn?.addEventListener("click", async () => {
         try {
-            await idbDelete("gh_token");
+            await Promise.all([
+                idbDelete(TOKEN_DATA_KEY),
+                idbDelete(TOKEN_CRYPTO_KEY),
+            ]);
             ui.token.value = "";
             updateClearBtn();
             showToast(
@@ -522,9 +542,12 @@ import {
         }
 
         try {
-            const savedToken = await idbGet("gh_token");
-            if (savedToken) {
-                const decrypted = decryptToken(savedToken);
+            const [savedToken, savedKey] = await Promise.all([
+                idbGet(TOKEN_DATA_KEY),
+                idbGet<CryptoKey>(TOKEN_CRYPTO_KEY),
+            ]);
+            if (savedToken && savedKey instanceof CryptoKey) {
+                const decrypted = await decryptToken(savedToken, savedKey);
                 ui.token.value = decrypted || "";
             }
             updateClearBtn();
@@ -621,7 +644,9 @@ import {
         }
 
         try {
-            await idbSet("gh_token", encryptToken(token));
+            const key = await getOrCreateTokenKey();
+            const encrypted = await encryptToken(token, key);
+            await idbSet(TOKEN_DATA_KEY, encrypted);
         } catch {
             /* Fail silently */
         }

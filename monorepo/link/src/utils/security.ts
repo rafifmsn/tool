@@ -1,4 +1,30 @@
-export const OBS_KEY = "x7f9a2b4c6d8e0f1_link";
+export interface EncryptedTokenPayload {
+    iv: Uint8Array;
+    ciphertext: Uint8Array;
+}
+
+const AES_ALGORITHM = "AES-GCM";
+const AES_KEY_LENGTH = 256;
+const AES_IV_BYTES = 12;
+
+export async function generateEncryptionKey(): Promise<CryptoKey> {
+    return crypto.subtle.generateKey(
+        { name: AES_ALGORITHM, length: AES_KEY_LENGTH },
+        false,
+        ["encrypt", "decrypt"],
+    );
+}
+
+function isEncryptedTokenPayload(value: unknown): value is EncryptedTokenPayload {
+    if (!value || typeof value !== "object") {
+        return false;
+    }
+    const candidate = value as Record<string, unknown>;
+    return (
+        candidate.iv instanceof Uint8Array &&
+        candidate.ciphertext instanceof Uint8Array
+    );
+}
 
 export function cleanGitHubIdentifier(str: string): string {
     return str.trim().replace(/[^a-zA-Z0-9-_]/g, "");
@@ -32,27 +58,39 @@ export function validateAndNormalizeUrl(url: string): string | null {
     }
 }
 
-export function encryptToken(token: string): string {
-    let xor = "";
-    for (let i = 0; i < token.length; i++) {
-        xor += String.fromCharCode(
-            token.charCodeAt(i) ^ OBS_KEY.charCodeAt(i % OBS_KEY.length),
-        );
-    }
-    return btoa(xor);
+export async function encryptToken(
+    token: string,
+    key: CryptoKey,
+): Promise<EncryptedTokenPayload> {
+    const iv = crypto.getRandomValues(new Uint8Array(AES_IV_BYTES));
+    const encoded = new TextEncoder().encode(token);
+    const encrypted = await crypto.subtle.encrypt(
+        { name: AES_ALGORITHM, iv },
+        key,
+        encoded,
+    );
+    return {
+        iv,
+        ciphertext: new Uint8Array(encrypted),
+    };
 }
 
-export function decryptToken(encrypted: string): string {
+export async function decryptToken(
+    payload: unknown,
+    key: CryptoKey,
+): Promise<string> {
+    if (!isEncryptedTokenPayload(payload)) {
+        return "";
+    }
     try {
-        const decoded = atob(encrypted);
-        let xor = "";
-        for (let i = 0; i < decoded.length; i++) {
-            xor += String.fromCharCode(
-                decoded.charCodeAt(i) ^
-                    OBS_KEY.charCodeAt(i % OBS_KEY.length),
-            );
-        }
-        return xor;
+        const iv = new Uint8Array(payload.iv);
+        const ciphertext = new Uint8Array(payload.ciphertext);
+        const decrypted = await crypto.subtle.decrypt(
+            { name: AES_ALGORITHM, iv },
+            key,
+            ciphertext,
+        );
+        return new TextDecoder().decode(decrypted);
     } catch {
         return "";
     }
