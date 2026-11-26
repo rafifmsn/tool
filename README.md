@@ -6,12 +6,16 @@
   <a href="https://github.com/rafifmsn/tool/actions/workflows/ci.yml">
     <img src="https://github.com/rafifmsn/tool/actions/workflows/ci.yml/badge.svg" alt="CI Build Status" />
   </a>
-  <a href="https://github.com/rafifmsn/tool/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/rafifmsn/tool" alt="License" />
-  </a>
   <a href="https://astro.build">
     <img src="https://img.shields.io/badge/built%20with-Astro-ff5d01.svg" alt="Built with Astro" />
   </a>
+  <a href="https://github.com/rafifmsn/tool/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/rafifmsn/tool" alt="License" />
+  </a>
+</p>
+
+<p align="center">
+  A personal productivity suite and static web toolkit built with Astro and Tailwind CSS, combining client-side utilities like a stopwatch, clipboard image saver, QR code suite, LaTeX-to-image converter, and text diff viewer with standalone monorepo apps for notes, kanban, tasks, and URL shortening.
 </p>
 
 ## Getting Started
@@ -85,7 +89,3 @@ src/
 3. **Add utility code** under `src/utils/my-tool/` for any client-side logic.
 
 4. Done. The dashboard auto-discovers it from `pages.json`.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
